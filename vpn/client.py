@@ -11,7 +11,7 @@ from .socks5 import serve
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="WSS-backed VPN tunnel client")
-    parser.add_argument("--worker", required=True, help="Worker URL, e.g. wss://name.workers.dev/tunnel")
+    parser.add_argument("--relay", required=True, help="Relay URL, e.g. wss://vpn.example.com/tunnel")
     parser.add_argument("--token", default=os.getenv("WS_VPN_TOKEN"), help="Tunnel token (or WS_VPN_TOKEN)")
     parser.add_argument("--listen-host", default="127.0.0.1")
     parser.add_argument("--listen-port", type=int, default=1080)
@@ -58,7 +58,7 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     config = VpnConfig(
-        worker_url=args.worker,
+        relay_url=args.relay,
         token=args.token,
         listen_host=args.listen_host,
         listen_port=args.listen_port,
