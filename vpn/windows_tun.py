@@ -8,7 +8,7 @@ import shutil
 import socket
 import subprocess
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from .config import VpnConfig
 
@@ -48,7 +48,7 @@ def get_primary_route() -> PrimaryRoute:
     data = _powershell_json(
         "$r = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' "
         "| Where-Object {$_.NextHop -ne '0.0.0.0'} "
-        "| Sort-Object RouteMetric, InterfaceMetric | Select-Object -First 1; "
+        "| Sort-Object RouteMetric | Select-Object -First 1; "
         "$a = Get-NetAdapter -InterfaceIndex $r.InterfaceIndex; "
         "[pscustomobject]@{alias=$a.Name; index=$r.InterfaceIndex; gateway=$r.NextHop} "
         "| ConvertTo-Json -Compress"
@@ -62,14 +62,14 @@ def get_primary_route() -> PrimaryRoute:
     )
 
 
-def resolve_worker_ipv4(host: str) -> List[str]:
+def resolve_relay_ipv4(host: str, port: int) -> List[str]:
     addresses = []
-    for info in socket.getaddrinfo(host, 443, socket.AF_INET, socket.SOCK_STREAM):
+    for info in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
         ip = info[4][0]
         if ip not in addresses:
             addresses.append(ip)
     if not addresses:
-        raise RuntimeError(f"Could not resolve Worker host: {host}")
+        raise RuntimeError(f"Could not resolve relay host: {host}")
     return addresses
 
 
@@ -90,9 +90,9 @@ class WindowsTun:
         self.config = config
         self.tun_name = tun_name
         self.tun2socks_path = shutil.which(tun2socks_path) or tun2socks_path
-        self.primary: PrimaryRoute | None = None
-        self.worker_ips: List[str] = []
-        self.process: asyncio.subprocess.Process | None = None
+        self.primary: Optional[PrimaryRoute] = None
+        self.relay_ips: List[str] = []
+        self.process: Optional[asyncio.subprocess.Process] = None
 
     async def start(self) -> None:
         if not is_admin():
@@ -101,7 +101,7 @@ class WindowsTun:
             raise FileNotFoundError(f"tun2socks not found: {self.tun2socks_path}")
 
         self.primary = get_primary_route()
-        self.worker_ips = resolve_worker_ipv4(self.config.worker_host)
+        self.relay_ips = resolve_relay_ipv4(self.config.relay_host, self.config.relay_port)
 
         self.process = await asyncio.create_subprocess_exec(
             self.tun2socks_path,
@@ -118,7 +118,7 @@ class WindowsTun:
             f"address={TUN_IP}", f"mask={TUN_MASK}", "gateway=none",
         )
 
-        for ip in self.worker_ips:
+        for ip in self.relay_ips:
             _run(
                 "route", "add", ip, "mask", "255.255.255.255",
                 self.primary.gateway, "if", str(self.primary.interface_index),
@@ -150,7 +150,7 @@ class WindowsTun:
             "0.0.0.0/0", self.tun_name, check=False,
         )
         if self.primary:
-            for ip in self.worker_ips:
+            for ip in self.relay_ips:
                 _run("route", "delete", ip, check=False)
 
         if self.process and self.process.returncode is None:
