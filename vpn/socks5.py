@@ -107,9 +107,9 @@ async def handle_client(
         target = await _read_target(reader)
         host, port = target
         ws = await WebSocketTunnel.connect(
-            host=config.worker_host,
-            port=config.worker_port,
-            path=config.worker_path,
+            host=config.relay_host,
+            port=config.relay_port,
+            path=config.relay_path,
             timeout=config.connect_timeout,
             headers={
                 "Authorization": f"Bearer {config.token}",
