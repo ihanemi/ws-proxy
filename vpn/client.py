@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from typing import Callable
 
 from .config import VpnConfig
 from .socks5 import serve
@@ -63,10 +64,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def run(config: VpnConfig, args: argparse.Namespace) -> None:
+async def run(
+    config: VpnConfig,
+    args: argparse.Namespace,
+    *,
+    stop_event: asyncio.Event | None = None,
+    on_ready: Callable[[], None] | None = None,
+) -> None:
     socks_task = asyncio.create_task(serve(config), name="socks5-server")
     tun = None
     tun_task: asyncio.Task[int] | None = None
+    stop_task: asyncio.Task[bool] | None = None
     preserve_kill_switch = False
     try:
         await asyncio.sleep(0.1)
@@ -95,12 +103,21 @@ async def run(config: VpnConfig, args: argparse.Namespace) -> None:
                 "on" if not args.no_ipv6 else "off",
                 "on" if not args.no_kill_switch else "off",
             )
+            if on_ready:
+                on_ready()
 
             tun_task = asyncio.create_task(tun.wait(), name="tun2socks-process")
+            waiters: list[asyncio.Task] = [socks_task, tun_task]
+            if stop_event is not None:
+                stop_task = asyncio.create_task(stop_event.wait(), name="vpn-stop-request")
+                waiters.append(stop_task)
+
             done, _pending = await asyncio.wait(
-                (socks_task, tun_task),
+                waiters,
                 return_when=asyncio.FIRST_COMPLETED,
             )
+            if stop_task is not None and stop_task in done:
+                return
             if tun_task in done:
                 return_code = tun_task.result()
                 preserve_kill_switch = not args.no_kill_switch
@@ -110,11 +127,23 @@ async def run(config: VpnConfig, args: argparse.Namespace) -> None:
                 )
             await socks_task
         else:
-            await socks_task
+            if on_ready:
+                on_ready()
+            if stop_event is None:
+                await socks_task
+            else:
+                stop_task = asyncio.create_task(stop_event.wait(), name="vpn-stop-request")
+                done, _pending = await asyncio.wait(
+                    (socks_task, stop_task),
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                if socks_task in done:
+                    await socks_task
     finally:
-        if tun_task and not tun_task.done():
-            tun_task.cancel()
-            await asyncio.gather(tun_task, return_exceptions=True)
+        for task in (stop_task, tun_task):
+            if task and not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
         if tun:
             await tun.stop(preserve_kill_switch=preserve_kill_switch)
         if not socks_task.done():
