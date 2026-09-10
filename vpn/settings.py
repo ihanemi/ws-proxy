@@ -65,8 +65,9 @@ def protect_token(token: str) -> str:
     in_blob, in_buffer = _blob(token.encode("utf-8"))
     entropy_blob, entropy_buffer = _blob(_ENTROPY)
     out_blob = _DATA_BLOB()
-    del in_buffer, entropy_buffer
 
+    # Keep the backing buffers referenced until CryptProtectData returns.
+    _ = (in_buffer, entropy_buffer)
     ok = crypt32.CryptProtectData(
         ctypes.byref(in_blob),
         "WS VPN token",
@@ -96,8 +97,9 @@ def unprotect_token(value: str) -> str:
     in_blob, in_buffer = _blob(encrypted)
     entropy_blob, entropy_buffer = _blob(_ENTROPY)
     out_blob = _DATA_BLOB()
-    del in_buffer, entropy_buffer
 
+    # Keep the backing buffers referenced until CryptUnprotectData returns.
+    _ = (in_buffer, entropy_buffer)
     ok = crypt32.CryptUnprotectData(
         ctypes.byref(in_blob),
         None,
