@@ -4,6 +4,8 @@ import ipaddress
 import struct
 from typing import Tuple
 
+from .protocol import validate_host
+
 
 VERSION = 1
 ATYP_IPV4 = 1
@@ -17,6 +19,7 @@ class UdpFrameError(ValueError):
 
 
 def encode_datagram(host: str, port: int, payload: bytes) -> bytes:
+    host = validate_host(host)
     if port < 1 or port > 65535:
         raise UdpFrameError("invalid UDP port")
     if len(payload) > MAX_DATAGRAM:
@@ -27,7 +30,7 @@ def encode_datagram(host: str, port: int, payload: bytes) -> bytes:
     except ValueError:
         encoded = host.encode("idna")
         if not encoded or len(encoded) > 255:
-            raise UdpFrameError("invalid domain name")
+            raise UdpFrameError("invalid domain name") from None
         address = bytes((ATYP_DOMAIN, len(encoded))) + encoded
     else:
         if isinstance(ip, ipaddress.IPv4Address):
@@ -39,6 +42,8 @@ def encode_datagram(host: str, port: int, payload: bytes) -> bytes:
 
 
 def decode_datagram(frame: bytes) -> Tuple[str, int, bytes]:
+    if len(frame) > MAX_DATAGRAM + 260:
+        raise UdpFrameError("UDP frame too large")
     if len(frame) < 1 + 1 + 2:
         raise UdpFrameError("truncated UDP frame")
     if frame[0] != VERSION:
@@ -73,6 +78,10 @@ def decode_datagram(frame: bytes) -> Tuple[str, int, bytes]:
     else:
         raise UdpFrameError("unsupported UDP address type")
 
+    try:
+        validate_host(host)
+    except ValueError as exc:
+        raise UdpFrameError("invalid UDP destination") from exc
     port = struct.unpack(">H", frame[offset:offset + 2])[0]
     offset += 2
     if port == 0:

@@ -2,300 +2,390 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hmac
 import ipaddress
 import logging
 import os
+import signal
 import socket
 import ssl
-from typing import Dict, Optional, Set, Tuple
+import time
+from collections import Counter
+from dataclasses import dataclass
+from http import HTTPStatus
 
 from websockets.asyncio.server import ServerConnection, serve
+from websockets.exceptions import ConnectionClosed
 
-from vpn.udp_protocol import UdpFrameError, decode_datagram, encode_datagram
-
+from vpn.async_utils import cancel_and_join, close_writer, run_pair
+from vpn.protocol import (
+    DATA, MAX_MESSAGE, MAX_PAYLOAD, MAX_QUEUE, READY, SUBPROTOCOL, TCP_EOF,
+    decode_tcp, validate_host, validate_token,
+)
+from vpn.udp_protocol import MAX_DATAGRAM, decode_datagram, encode_datagram
 
 log = logging.getLogger("ws-vpn-relay")
+WIRE_LOG = logging.getLogger("ws-vpn-relay.wire")
+WIRE_LOG.setLevel(logging.WARNING)  # DEBUG would disclose Authorization headers.
+
+
+@dataclass(frozen=True)
+class RelayLimits:
+    connections: int = 256
+    per_peer: int = 128
+    connect_timeout: float = 10
+    tcp_idle: float = 300
+    udp_idle: float = 120
+    udp_targets: int = 256
+    udp_target_ttl: float = 60
+    udp_packets_per_second: int = 1000
+    udp_bytes_per_second: int = 1024 * 1024
+
+    def __post_init__(self):
+        if any(value <= 0 for value in vars(self).values()):
+            raise ValueError("All relay limits must be positive")
 
 
 def _is_public_ip(value: str) -> bool:
     ip = ipaddress.ip_address(value)
-    return not (
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local
-        or ip.is_multicast
-        or ip.is_reserved
-        or ip.is_unspecified
-    )
+    # is_global also excludes CGNAT; reject transition mechanisms to avoid
+    # embedding a different IPv4 destination inside an apparently global IPv6 IP.
+    if not ip.is_global or ip.is_multicast or ip.is_reserved:
+        return False
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None or ip.sixtofour is not None or ip.teredo is not None:
+            return False
+        if ip in ipaddress.ip_network("64:ff9b::/96") or ip in ipaddress.ip_network("64:ff9b:1::/48"):
+            return False
+    return True
 
 
-async def _resolve_public(
-    host: str,
-    port: int,
-    socktype: int,
-) -> Tuple[str, int]:
-    loop = asyncio.get_running_loop()
-    infos = await loop.getaddrinfo(host, port, type=socktype)
-    seen = set()
-    for family, _socktype, _proto, _canonname, sockaddr in infos:
-        ip = sockaddr[0]
-        if ip in seen:
-            continue
-        seen.add(ip)
-        try:
-            if _is_public_ip(ip):
-                return ip, family
-        except ValueError:
-            continue
-    raise ValueError("Destination didn't resolve to a public IP")
+async def _resolve_public(host: str, port: int, socktype: int) -> tuple[str, int]:
+    host = validate_host(host)
+    if not 1 <= port <= 65535 or port == 25:
+        raise ValueError("Invalid destination port")
+    infos = await asyncio.get_running_loop().getaddrinfo(host, port, type=socktype)
+    candidates = [(addr[0], family) for family, _, _, _, addr in infos
+                  if family in (socket.AF_INET, socket.AF_INET6)]
+    # Reject mixed public/private answers instead of letting resolver order
+    # choose a bypass. Connect/send only to the validated numeric address.
+    if not candidates or any(not _is_public_ip(ip) for ip, _ in candidates):
+        raise ValueError("Destination must resolve exclusively to public addresses")
+    return candidates[0]
 
 
-async def _pipe_ws_to_tcp(ws: ServerConnection, writer: asyncio.StreamWriter) -> None:
-    async for message in ws:
-        if isinstance(message, str):
-            raise ValueError("Text frames aren't supported")
-        writer.write(message)
-        await writer.drain()
+class Activity:
+    def __init__(self):
+        self.last = time.monotonic()
+
+    def touch(self):
+        self.last = time.monotonic()
+
+    async def watchdog(self, timeout: float):
+        while True:
+            remaining = timeout - (time.monotonic() - self.last)
+            if remaining <= 0:
+                raise TimeoutError("Relay session idle timeout")
+            await asyncio.sleep(remaining)
 
 
-async def _pipe_tcp_to_ws(reader: asyncio.StreamReader, ws: ServerConnection) -> None:
-    while True:
-        chunk = await reader.read(256 * 1024)
-        if not chunk:
-            return
-        await ws.send(chunk)
+class Budget:
+    """Per-association packet and byte token bucket, in each direction."""
+    def __init__(self, limits: RelayLimits):
+        self.limits = limits
+        self.packets = float(limits.udp_packets_per_second)
+        self.bytes = float(limits.udp_bytes_per_second)
+        self.updated = time.monotonic()
+
+    def take(self, size: int) -> bool:
+        now = time.monotonic()
+        elapsed = now - self.updated
+        self.updated = now
+        self.packets = min(self.limits.udp_packets_per_second,
+                           self.packets + elapsed * self.limits.udp_packets_per_second)
+        self.bytes = min(self.limits.udp_bytes_per_second,
+                         self.bytes + elapsed * self.limits.udp_bytes_per_second)
+        if self.packets < 1 or self.bytes < size:
+            return False
+        self.packets -= 1
+        self.bytes -= size
+        return True
 
 
-async def _handle_tcp(ws: ServerConnection) -> None:
-    request = ws.request
-    assert request is not None
-    headers = request.headers
-    host = (headers.get("X-Tunnel-Host") or "").strip()
-    try:
-        port = int(headers.get("X-Tunnel-Port") or "0")
-    except ValueError:
-        port = 0
+class Relay:
+    def __init__(self, token: str, limits: RelayLimits | None = None):
+        validate_token(token)
+        self.token = token
+        self.limits = limits or RelayLimits()
+        self.total = 0
+        self.peers: Counter = Counter()
 
-    if not host or port < 1 or port > 65535 or port == 25:
-        await ws.close(code=1008, reason="invalid destination")
-        return
+    def connection_factory(self, *args, **kwargs):
+        relay = self
 
-    try:
-        ip, family = await _resolve_public(host, port, socket.SOCK_STREAM)
-        reader, writer = await asyncio.open_connection(ip, port, family=family)
-    except Exception as exc:
-        log.warning("TCP connect failed %s:%d: %s", host, port, exc)
-        await ws.close(code=1011, reason="connect failed")
-        return
+        class LimitedConnection(ServerConnection):
+            admitted = False
 
-    peer = ws.remote_address
-    log.info("%s -> TCP %s:%d (%s)", peer, host, port, ip)
+            def connection_made(self, transport):
+                peer = transport.get_extra_info("peername")
+                self.peer_key = peer[0] if peer else "unknown"
+                super().connection_made(transport)
+                if relay.total >= relay.limits.connections or relay.peers[self.peer_key] >= relay.limits.per_peer:
+                    transport.close()
+                    return
+                self.admitted = True
+                relay.total += 1
+                relay.peers[self.peer_key] += 1
 
-    upstream = asyncio.create_task(_pipe_ws_to_tcp(ws, writer))
-    downstream = asyncio.create_task(_pipe_tcp_to_ws(reader, ws))
-    try:
-        done, pending = await asyncio.wait(
-            (upstream, downstream), return_when=asyncio.FIRST_COMPLETED
-        )
-        for task in pending:
-            task.cancel()
-        await asyncio.gather(*pending, return_exceptions=True)
-        for task in done:
-            if task.cancelled():
-                continue
-            exc = task.exception()
-            if exc:
-                raise exc
-    except Exception as exc:
-        log.debug("TCP relay closed %s:%d: %s", host, port, exc)
-    finally:
-        writer.close()
-        try:
-            await writer.wait_closed()
-        except Exception:
-            pass
+            def connection_lost(self, exc):
+                if self.admitted:
+                    self.admitted = False
+                    relay.total -= 1
+                    relay.peers[self.peer_key] -= 1
+                    if not relay.peers[self.peer_key]:
+                        del relay.peers[self.peer_key]
+                super().connection_lost(exc)
 
+        return LimitedConnection(*args, **kwargs)
 
-def _create_udp_socket(family: int) -> socket.socket:
-    sock = socket.socket(family, socket.SOCK_DGRAM)
-    sock.setblocking(False)
-    if family == socket.AF_INET:
-        sock.bind(("0.0.0.0", 0))
-    elif family == socket.AF_INET6:
-        sock.bind(("::", 0))
-    else:
-        sock.close()
-        raise ValueError("Unsupported UDP family")
-    return sock
-
-
-async def _udp_ws_to_network(
-    ws: ServerConnection,
-    sockets: Dict[int, socket.socket],
-    allowed_sources: Set[Tuple[str, int]],
-) -> None:
-    loop = asyncio.get_running_loop()
-    cache: Dict[Tuple[str, int], Tuple[str, int]] = {}
-
-    async for message in ws:
-        if isinstance(message, str):
-            raise ValueError("Text frames aren't supported")
-        try:
-            host, port, payload = decode_datagram(message)
-        except UdpFrameError as exc:
-            log.debug("Dropping invalid UDP tunnel frame: %s", exc)
-            continue
-        if port == 25:
-            continue
-
-        key = (host, port)
-        resolved = cache.get(key)
-        if resolved is None:
+    def process_request(self, connection, request):
+        auth = request.headers.get_all("Authorization")
+        expected = f"Bearer {self.token}".encode("ascii")
+        if len(auth) != 1 or not hmac.compare_digest(auth[0].encode("utf-8"), expected):
+            return connection.respond(HTTPStatus.UNAUTHORIZED, "Unauthorized\n")
+        if request.path not in ("/tunnel", "/udp"):
+            return connection.respond(HTTPStatus.NOT_FOUND, "Unknown tunnel path\n")
+        protocols = ",".join(request.headers.get_all("Sec-WebSocket-Protocol")).split(",")
+        if SUBPROTOCOL not in [s.strip() for s in protocols]:
+            return connection.respond(HTTPStatus.UPGRADE_REQUIRED, "WSVPN/1 required\n")
+        if request.path == "/tunnel":
             try:
-                resolved = await _resolve_public(host, port, socket.SOCK_DGRAM)
-            except Exception as exc:
-                log.debug("UDP resolve rejected %s:%d: %s", host, port, exc)
-                continue
-            cache[key] = resolved
+                hosts = request.headers.get_all("X-Tunnel-Host")
+                ports = request.headers.get_all("X-Tunnel-Port")
+                if len(hosts) != 1 or len(ports) != 1:
+                    raise ValueError("Invalid destination headers")
+                validate_host(hosts[0])
+                if not ports[0].isascii() or not ports[0].isdigit():
+                    raise ValueError("Invalid port")
+                port = int(ports[0])
+                if not 1 <= port <= 65535 or port == 25:
+                    raise ValueError("Invalid port")
+            except ValueError:
+                return connection.respond(HTTPStatus.BAD_REQUEST, "Invalid destination\n")
+        return None
 
-        ip, family = resolved
-        sock = sockets.get(family)
-        if sock is None:
-            try:
-                sock = _create_udp_socket(family)
-            except OSError as exc:
-                log.debug("UDP family %s unavailable: %s", family, exc)
-                continue
-            sockets[family] = sock
-
-        allowed_sources.add((ip, port))
-        target = (ip, port) if family == socket.AF_INET else (ip, port, 0, 0)
+    async def handle(self, ws):
         try:
-            await loop.sock_sendto(sock, payload, target)
-        except OSError as exc:
-            log.debug("UDP send failed %s:%d: %s", ip, port, exc)
+            if ws.request.path == "/tunnel":
+                await self.tcp(ws)
+            else:
+                await self.udp(ws)
+        except (ValueError, TimeoutError, OSError, ConnectionClosed) as exc:
+            # Never log a request, headers, or exception text provided by a peer.
+            log.info("session_closed reason=%s", type(exc).__name__)
+            await ws.close(code=1008 if isinstance(exc, ValueError) else 1011,
+                           reason="tunnel failed")
 
+    async def tcp(self, ws):
+        headers = ws.request.headers
+        host, port = headers["X-Tunnel-Host"], int(headers["X-Tunnel-Port"])
 
-async def _udp_network_to_ws(
-    ws: ServerConnection,
-    sock: socket.socket,
-    allowed_sources: Set[Tuple[str, int]],
-) -> None:
-    loop = asyncio.get_running_loop()
-    while True:
-        payload, source = await loop.sock_recvfrom(sock, 65535)
-        host, port = source[0], source[1]
-        if (host, port) not in allowed_sources:
-            continue
-        await ws.send(encode_datagram(host, port, payload))
+        async def open_target():
+            ip, family = await _resolve_public(host, port, socket.SOCK_STREAM)
+            return await asyncio.open_connection(ip, port, family=family)
 
+        reader, writer = await asyncio.wait_for(open_target(), self.limits.connect_timeout)
+        activity = Activity()
 
-async def _handle_udp(ws: ServerConnection) -> None:
-    sockets: Dict[int, socket.socket] = {}
-    allowed_sources: Set[Tuple[str, int]] = set()
-    peer = ws.remote_address
-    log.info("%s -> UDP association", peer)
-
-    upstream = asyncio.create_task(
-        _udp_ws_to_network(ws, sockets, allowed_sources),
-        name="relay-udp-upstream",
-    )
-    receivers: Dict[int, asyncio.Task] = {}
-
-    async def monitor_sockets() -> None:
-        try:
+        async def upstream():
             while True:
-                for family, sock in list(sockets.items()):
-                    if family not in receivers:
-                        receivers[family] = asyncio.create_task(
-                            _udp_network_to_ws(ws, sock, allowed_sources),
-                            name=f"relay-udp-downstream-{family}",
+                data = decode_tcp(await ws.recv())
+                activity.touch()
+                if data is None:
+                    writer.write_eof()
+                    await writer.drain()
+                    return
+                writer.write(data)
+                await writer.drain()
+
+        async def downstream():
+            while True:
+                data = await reader.read(MAX_PAYLOAD)
+                activity.touch()
+                if not data:
+                    await ws.send(TCP_EOF)
+                    return
+                await ws.send(DATA + data)
+
+        try:
+            await ws.send(READY)
+            await run_pair(run_pair(upstream(), downstream(), half_close=True),
+                           activity.watchdog(self.limits.tcp_idle))
+        finally:
+            await close_writer(writer)
+
+    async def udp(self, ws):
+        sockets = {}
+        tasks = []
+        # Both maps have a hard cap and expiry. Answers must come from a
+        # currently contacted numeric endpoint, never arbitrary UDP senders.
+        cache = {}
+        allowed = {}
+        outgoing = Budget(self.limits)
+        incoming = Budget(self.limits)
+        activity = Activity()
+        loop = asyncio.get_running_loop()
+
+        async def receive(sock):
+            while True:
+                payload, source = await loop.sock_recvfrom(sock, MAX_DATAGRAM + 1)
+                if len(payload) > MAX_DATAGRAM or not incoming.take(len(payload)):
+                    continue
+                if allowed.get((source[0], source[1]), 0) <= time.monotonic():
+                    continue
+                activity.touch()
+                await ws.send(encode_datagram(source[0], source[1], payload))
+
+        async def send():
+            async for message in ws:
+                if not isinstance(message, bytes):
+                    raise ValueError("UDP requires binary messages")
+                host, port, payload = decode_datagram(message)
+                activity.touch()
+                if port == 25 or not outgoing.take(len(payload)):
+                    continue
+                now = time.monotonic()
+                for key in [key for key, value in cache.items() if value[2] <= now]:
+                    del cache[key]
+                for key in [key for key, expires in allowed.items() if expires <= now]:
+                    del allowed[key]
+                key = (host, port)
+                if key not in cache:
+                    if len(cache) >= self.limits.udp_targets:
+                        continue
+                    try:
+                        ip, family = await asyncio.wait_for(
+                            _resolve_public(host, port, socket.SOCK_DGRAM), self.limits.connect_timeout,
                         )
-                await asyncio.sleep(0.01)
-        except asyncio.CancelledError:
-            raise
+                    except (OSError, ValueError, TimeoutError):
+                        continue
+                    cache[key] = (ip, family, now + self.limits.udp_target_ttl)
+                ip, family, _ = cache[key]
+                if family not in sockets:
+                    continue
+                endpoint = (ip, port)
+                if endpoint not in allowed and len(allowed) >= self.limits.udp_targets:
+                    continue
+                # Install before send so a fast reply cannot beat the check.
+                allowed[endpoint] = now + self.limits.udp_target_ttl
+                try:
+                    await loop.sock_sendto(sockets[family], payload,
+                                           endpoint if family == socket.AF_INET else (*endpoint, 0, 0))
+                except OSError:
+                    allowed.pop(endpoint, None)
 
-    monitor = asyncio.create_task(monitor_sockets(), name="relay-udp-monitor")
+        try:
+            for family in (socket.AF_INET, socket.AF_INET6):
+                try:
+                    sock = _create_udp_socket(family)
+                except OSError:
+                    continue
+                sockets[family] = sock
+                tasks.append(asyncio.create_task(receive(sock)))
+            if not sockets:
+                raise OSError("UDP egress unavailable")
+            await ws.send(READY)
+            tasks.extend((asyncio.create_task(send()),
+                          asyncio.create_task(activity.watchdog(self.limits.udp_idle))))
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                task.result()
+        finally:
+            await cancel_and_join(*tasks)
+            for sock in sockets.values():
+                sock.close()
+
+
+def _create_udp_socket(family):
+    sock = socket.socket(family, socket.SOCK_DGRAM)
     try:
-        await upstream
-    except Exception as exc:
-        log.debug("UDP relay closed for %s: %s", peer, exc)
-    finally:
-        monitor.cancel()
-        await asyncio.gather(monitor, return_exceptions=True)
-        for task in receivers.values():
-            task.cancel()
-        if receivers:
-            await asyncio.gather(*receivers.values(), return_exceptions=True)
-        for sock in sockets.values():
-            sock.close()
+        sock.setblocking(False)
+        if family == socket.AF_INET6:
+            sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+        sock.bind(("0.0.0.0", 0) if family == socket.AF_INET else ("::", 0))
+        return sock
+    except BaseException:
+        sock.close()
+        raise
 
 
-async def _handle_connection(ws: ServerConnection, token: str) -> None:
-    request = ws.request
-    if request is None:
-        await ws.close(code=1008, reason="missing request")
-        return
-
-    if request.headers.get("Authorization") != f"Bearer {token}":
-        await ws.close(code=1008, reason="unauthorized")
-        return
-
-    path = request.path.split("?", 1)[0]
-    if path == "/tunnel":
-        await _handle_tcp(ws)
-    elif path == "/udp":
-        await _handle_udp(ws)
-    else:
-        await ws.close(code=1008, reason="invalid path")
-
-
-def _ssl_context(cert: Optional[str], key: Optional[str]) -> Optional[ssl.SSLContext]:
+def _ssl_context(cert, key):
     if not cert and not key:
         return None
     if not cert or not key:
         raise ValueError("Both --cert and --key are required for TLS")
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(cert, key)
     return context
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser():
     parser = argparse.ArgumentParser(description="WS VPN remote relay")
-    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--token", default=os.getenv("WS_VPN_TOKEN"))
-    parser.add_argument("--cert", help="TLS certificate path; omit when behind a TLS reverse proxy")
-    parser.add_argument("--key", help="TLS private key path")
+    parser.add_argument("--cert")
+    parser.add_argument("--key")
+    parser.add_argument("--max-connections", type=int, default=256)
+    parser.add_argument("--max-per-peer", type=int, default=128)
+    parser.add_argument("--connect-timeout", type=float, default=10)
+    parser.add_argument("--tcp-idle", type=float, default=300)
+    parser.add_argument("--udp-idle", type=float, default=120)
+    parser.add_argument("--udp-targets", type=int, default=256)
     parser.add_argument("--verbose", action="store_true")
     return parser
 
 
-async def run_server(args: argparse.Namespace) -> None:
+async def run_server(args):
     if not args.token:
-        raise RuntimeError("Missing token: pass --token or set WS_VPN_TOKEN")
-    ssl_context = _ssl_context(args.cert, args.key)
-    async with serve(
-        lambda ws: _handle_connection(ws, args.token),
-        args.host,
-        args.port,
-        ssl=ssl_context,
-        compression=None,
-        max_size=None,
-        ping_interval=20,
-        ping_timeout=20,
-    ) as server:
-        scheme = "wss" if ssl_context else "ws"
-        log.info("relay listening on %s://%s:%d (TCP /tunnel, UDP /udp)", scheme, args.host, args.port)
-        await server.serve_forever()
+        raise ValueError("Set WS_VPN_TOKEN to a long random token")
+    context = _ssl_context(args.cert, args.key)
+    if context is None and not ipaddress.ip_address(args.host).is_loopback:
+        raise ValueError("Plaintext relay must bind to loopback behind a TLS reverse proxy")
+    relay = Relay(args.token, RelayLimits(
+        connections=args.max_connections, per_peer=args.max_per_peer,
+        connect_timeout=args.connect_timeout, tcp_idle=args.tcp_idle,
+        udp_idle=args.udp_idle, udp_targets=args.udp_targets,
+    ))
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    installed = []
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, stop.set)
+            installed.append(sig)
+        except (NotImplementedError, RuntimeError):
+            pass
+    try:
+        async with serve(
+            relay.handle, args.host, args.port, ssl=context,
+            process_request=relay.process_request, create_connection=relay.connection_factory,
+            subprotocols=[SUBPROTOCOL], compression=None, max_size=MAX_MESSAGE,
+            max_queue=MAX_QUEUE, open_timeout=10, close_timeout=3,
+            ping_interval=20, ping_timeout=20, logger=WIRE_LOG,
+        ):
+            log.info("relay_listening host=%s port=%d tls=%s", args.host, args.port, bool(context))
+            await stop.wait()
+    finally:
+        for sig in installed:
+            loop.remove_signal_handler(sig)
 
 
-def main() -> None:
+def main():
     args = build_parser().parse_args()
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
+                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
     try:
         asyncio.run(run_server(args))
     except KeyboardInterrupt:

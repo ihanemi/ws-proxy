@@ -5,9 +5,12 @@ import ipaddress
 import logging
 import socket
 import struct
-from typing import Optional, Tuple
+from typing import Tuple
 
+from .async_utils import cancel_and_join, close_writer, run_pair
 from .config import VpnConfig
+from .protocol import validate_host
+from .udp_protocol import MAX_DATAGRAM, UdpFrameError
 from .udp_protocol import decode_datagram, encode_datagram
 from .websocket import WebSocketTunnel
 
@@ -41,11 +44,16 @@ async def _read_address(reader: asyncio.StreamReader, atyp: int) -> str:
 
 async def _read_request(reader: asyncio.StreamReader) -> Tuple[int, str, int]:
     header = await reader.readexactly(4)
-    ver, cmd, _rsv, atyp = header
+    ver, cmd, rsv, atyp = header
+    if rsv != 0:
+        raise SocksProtocolError("Invalid reserved byte")
     if ver != SOCKS_VERSION:
         raise SocksProtocolError("Unsupported SOCKS version")
     host = await _read_address(reader, atyp)
     port = struct.unpack(">H", await reader.readexactly(2))[0]
+    validate_host(host)
+    if cmd == CMD_CONNECT and port == 0:
+        raise SocksProtocolError("Invalid destination port")
     return cmd, host, port
 
 
@@ -68,7 +76,7 @@ def _encode_address(host: str) -> bytes:
     except ValueError:
         encoded = host.encode("idna")
         if not encoded or len(encoded) > 255:
-            raise SocksProtocolError("Invalid domain")
+            raise SocksProtocolError("Invalid domain") from None
         return bytes((ATYP_DOMAIN, len(encoded))) + encoded
 
     if isinstance(ip, ipaddress.IPv4Address):
@@ -138,6 +146,7 @@ async def _client_to_ws(
     while True:
         data = await reader.read(chunk_size)
         if not data:
+            await ws.send_eof()
             return
         await ws.send(data)
 
@@ -149,6 +158,8 @@ async def _ws_to_client(
     while True:
         data = await ws.recv()
         if data is None:
+            writer.write_eof()
+            await writer.drain()
             return
         writer.write(data)
         await writer.drain()
@@ -160,61 +171,54 @@ async def _bridge(
     ws: WebSocketTunnel,
     chunk_size: int,
 ) -> None:
-    upstream = asyncio.create_task(_client_to_ws(reader, ws, chunk_size))
-    downstream = asyncio.create_task(_ws_to_client(ws, writer))
-    done, pending = await asyncio.wait(
-        (upstream, downstream), return_when=asyncio.FIRST_COMPLETED
-    )
-    for task in pending:
-        task.cancel()
-    await asyncio.gather(*pending, return_exceptions=True)
-    for task in done:
-        if task.cancelled():
-            continue
-        exc = task.exception()
-        if exc:
-            raise exc
+    await run_pair(_client_to_ws(reader, ws, chunk_size),
+                   _ws_to_client(ws, writer), half_close=True)
 
 
 class _UdpAssociateProtocol(asyncio.DatagramProtocol):
-    def __init__(self, ws: WebSocketTunnel, allowed_ip: Optional[str]):
+    def __init__(self, ws: WebSocketTunnel, allowed_ip: str, allowed_port: int = 0):
         self.ws = ws
         self.allowed_ip = allowed_ip
-        self.transport: Optional[asyncio.DatagramTransport] = None
-        self.client_addr: Optional[Tuple[str, int]] = None
-        self.tasks: set[asyncio.Task] = set()
+        self.allowed_port = allowed_port
+        self.transport = None
+        self.client_addr = None
+        self.queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=16)
 
-    def connection_made(self, transport) -> None:
+    def connection_made(self, transport):
         self.transport = transport
 
-    def datagram_received(self, data: bytes, addr) -> None:
-        if self.allowed_ip and addr[0] != self.allowed_ip:
+    def datagram_received(self, data: bytes, addr):
+        endpoint = (addr[0], addr[1])
+        if addr[0] != self.allowed_ip or (self.allowed_port and addr[1] != self.allowed_port):
             return
-        if self.client_addr is None:
-            self.client_addr = (addr[0], addr[1])
-        elif addr != self.client_addr:
+        if self.client_addr is not None and endpoint != self.client_addr:
             return
-
         try:
             host, port, payload = _parse_udp_request(data)
-        except (SocksProtocolError, UnicodeError) as exc:
-            log.debug("Dropping malformed SOCKS UDP datagram from %s: %s", addr, exc)
+            validate_host(host)
+            if len(payload) > MAX_DATAGRAM:
+                return
+            frame = encode_datagram(host, port, payload)
+        except (SocksProtocolError, UnicodeError, UdpFrameError, ValueError):
             return
+        # Malformed packets cannot claim the association's source port.
+        if self.client_addr is None:
+            self.client_addr = endpoint
+        try:
+            self.queue.put_nowait(frame)
+        except asyncio.QueueFull:
+            pass  # UDP drops are preferable to unbounded allocations/tasks.
 
-        task = asyncio.create_task(self.ws.send(encode_datagram(host, port, payload)))
-        self.tasks.add(task)
-        task.add_done_callback(self.tasks.discard)
+    async def sender(self):
+        while True:
+            await self.ws.send(await self.queue.get())
 
-    def error_received(self, exc: Exception) -> None:
-        log.debug("Local UDP relay error: %s", exc)
-
-    async def close(self) -> None:
+    async def close(self):
         if self.transport:
             self.transport.close()
-        for task in list(self.tasks):
-            task.cancel()
-        if self.tasks:
-            await asyncio.gather(*self.tasks, return_exceptions=True)
+
+    def error_received(self, exc):
+        log.debug("Local UDP socket error: %s", type(exc).__name__)
 
 
 async def _udp_ws_to_client(
@@ -233,59 +237,34 @@ async def _udp_ws_to_client(
             )
 
 
-async def _handle_udp_associate(
-    reader: asyncio.StreamReader,
-    writer: asyncio.StreamWriter,
-    config: VpnConfig,
-    peer,
-) -> None:
+async def _handle_udp_associate(reader, writer, config, peer, host, port, mark_ready):
+    if host not in ("0.0.0.0", "::", peer[0]):
+        raise SocksProtocolError("UDP source must match the TCP control peer")
     ws = await WebSocketTunnel.connect(
-        host=config.relay_host,
-        port=config.relay_port,
-        path=config.relay_udp_path,
-        timeout=config.connect_timeout,
+        host=config.relay_host, port=config.relay_port, path=config.relay_udp_path,
+        timeout=config.connect_timeout, resolved_ips=config.relay_ips,
         headers={"Authorization": f"Bearer {config.token}"},
     )
-
-    loop = asyncio.get_running_loop()
-    allowed_ip = peer[0] if peer else None
-    protocol = _UdpAssociateProtocol(ws, allowed_ip)
-    bind_host = config.listen_host
+    protocol = _UdpAssociateProtocol(ws, peer[0], port)
+    tasks = []
     try:
-        ip = ipaddress.ip_address(bind_host)
-        if not isinstance(ip, ipaddress.IPv4Address) or ip.is_unspecified:
-            bind_host = "127.0.0.1"
-    except ValueError:
-        bind_host = "127.0.0.1"
-
-    transport, _ = await loop.create_datagram_endpoint(
-        lambda: protocol,
-        local_addr=(bind_host, 0),
-        family=socket.AF_INET,
-    )
-    sockname = transport.get_extra_info("sockname")
-    _reply(writer, 0, sockname[0], sockname[1])
-    await writer.drain()
-    log.info("%s -> UDP ASSOCIATE %s:%d", peer, sockname[0], sockname[1])
-
-    control = asyncio.create_task(reader.read(), name="socks-udp-control")
-    receiver = asyncio.create_task(
-        _udp_ws_to_client(ws, protocol), name="socks-udp-downstream"
-    )
-    try:
-        done, pending = await asyncio.wait(
-            (control, receiver), return_when=asyncio.FIRST_COMPLETED
+        family = socket.AF_INET6 if ":" in config.listen_host else socket.AF_INET
+        transport, _ = await asyncio.get_running_loop().create_datagram_endpoint(
+            lambda: protocol, local_addr=(config.listen_host, 0), family=family,
         )
-        for task in pending:
-            task.cancel()
-        await asyncio.gather(*pending, return_exceptions=True)
+        sockname = transport.get_extra_info("sockname")
+        _reply(writer, 0, sockname[0], sockname[1])
+        mark_ready()
+        await writer.drain()
+        # A SOCKS UDP control channel is a lifetime signal, not a data buffer.
+        tasks = [asyncio.create_task(reader.read(1)),
+                 asyncio.create_task(_udp_ws_to_client(ws, protocol)),
+                 asyncio.create_task(protocol.sender())]
+        done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
-            if task.cancelled():
-                continue
-            exc = task.exception()
-            if exc:
-                raise exc
+            task.result()
     finally:
+        await cancel_and_join(*tasks)
         await protocol.close()
         await ws.close()
 
@@ -297,12 +276,14 @@ async def _handle_connect(
     peer,
     host: str,
     port: int,
+    mark_ready,
 ) -> None:
     ws = await WebSocketTunnel.connect(
         host=config.relay_host,
         port=config.relay_port,
         path=config.relay_path,
         timeout=config.connect_timeout,
+        resolved_ips=config.relay_ips,
         headers={
             "Authorization": f"Bearer {config.token}",
             "X-Tunnel-Host": host,
@@ -311,6 +292,7 @@ async def _handle_connect(
     )
     try:
         _reply(writer, 0)
+        mark_ready()
         await writer.drain()
         log.info("%s -> TCP %s:%d", peer, host, port)
         await _bridge(reader, writer, ws, config.buffer_size)
@@ -318,55 +300,62 @@ async def _handle_connect(
         await ws.close()
 
 
-async def handle_client(
-    reader: asyncio.StreamReader,
-    writer: asyncio.StreamWriter,
-    config: VpnConfig,
-) -> None:
+async def handle_client(reader, writer, config):
     peer = writer.get_extra_info("peername")
-    request: Optional[Tuple[int, str, int]] = None
+    negotiated = False
+    established = False
+
+    def mark_ready():
+        nonlocal established
+        established = True
+
     try:
-        await _negotiate(reader, writer)
-        request = await _read_request(reader)
-        cmd, host, port = request
+        await asyncio.wait_for(_negotiate(reader, writer), config.connect_timeout)
+        negotiated = True
+        cmd, host, port = await asyncio.wait_for(_read_request(reader), config.connect_timeout)
         if cmd == CMD_CONNECT:
-            await _handle_connect(reader, writer, config, peer, host, port)
+            await _handle_connect(reader, writer, config, peer, host, port, mark_ready)
         elif cmd == CMD_UDP_ASSOCIATE:
-            await _handle_udp_associate(reader, writer, config, peer)
+            await _handle_udp_associate(reader, writer, config, peer, host, port, mark_ready)
         else:
             _reply(writer, 7)
             await writer.drain()
-    except SocksProtocolError as exc:
-        log.debug("SOCKS error from %s: %s", peer, exc)
-        try:
-            _reply(writer, 7)
-            await writer.drain()
-        except Exception:
-            pass
     except asyncio.IncompleteReadError:
         pass
-    except Exception as exc:
-        log.warning("Tunnel failed %s -> %s: %s", peer, request, exc)
-        try:
+    except (OSError, ValueError, SocksProtocolError, TimeoutError) as exc:
+        log.debug("SOCKS session failed: %s", type(exc).__name__)
+        # Never append SOCKS reply bytes to an already-established TCP stream.
+        if negotiated and not established:
             _reply(writer, 1)
-            await writer.drain()
-        except Exception:
-            pass
+            try:
+                await writer.drain()
+            except OSError:
+                pass
     finally:
-        writer.close()
-        try:
-            await writer.wait_closed()
-        except Exception:
-            pass
+        await close_writer(writer)
 
 
-async def serve(config: VpnConfig) -> None:
-    server = await asyncio.start_server(
-        lambda r, w: handle_client(r, w, config),
-        config.listen_host,
-        config.listen_port,
-    )
-    sockets = ", ".join(str(sock.getsockname()) for sock in server.sockets or [])
-    log.info("SOCKS5 TCP/UDP listening on %s", sockets)
-    async with server:
-        await server.serve_forever()
+async def serve(config: VpnConfig, *, ready: asyncio.Event | None = None):
+    clients = set()
+
+    def accept(reader, writer):
+        if len(clients) >= config.max_clients:
+            writer.close()
+            return
+        task = asyncio.create_task(handle_client(reader, writer, config))
+        clients.add(task)
+
+        def finished(task):
+            clients.discard(task)
+            if not task.cancelled() and task.exception():
+                log.error("SOCKS handler stopped: %s", type(task.exception()).__name__)
+        task.add_done_callback(finished)
+
+    server = await asyncio.start_server(accept, config.listen_host, config.listen_port)
+    try:
+        async with server:
+            if ready is not None:
+                ready.set()
+            await server.serve_forever()
+    finally:
+        await cancel_and_join(*clients)

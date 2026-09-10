@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 import asyncio
-import base64
-import hashlib
-import os
+import ipaddress
+import logging
 import socket
 import ssl
-import struct
-from typing import Dict, Optional
+from typing import Mapping, Sequence
 
+from websockets.asyncio.client import ClientConnection, connect
+from websockets.exceptions import ConnectionClosed, InvalidHandshake
 
-_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+from .protocol import (
+    DATA, MAX_MESSAGE, MAX_PAYLOAD, MAX_QUEUE, READY, SUBPROTOCOL, TCP_EOF,
+    decode_tcp, validate_host,
+)
+
+# The library's DEBUG logs include HTTP headers, including Authorization.
+WIRE_LOG = logging.getLogger("ws-vpn.wire")
+WIRE_LOG.setLevel(logging.WARNING)
 
 
 class WebSocketError(ConnectionError):
@@ -18,12 +25,10 @@ class WebSocketError(ConnectionError):
 
 
 class WebSocketTunnel:
-    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        self.reader = reader
-        self.writer = writer
+    def __init__(self, connection: ClientConnection, *, udp: bool = False):
+        self.connection = connection
+        self.udp = udp
         self.closed = False
-        self._fragment = bytearray()
-        self._send_lock = asyncio.Lock()
 
     @classmethod
     async def connect(
@@ -31,167 +36,96 @@ class WebSocketTunnel:
         host: str,
         port: int,
         path: str,
-        headers: Optional[Dict[str, str]] = None,
+        headers: Mapping[str, str] | None = None,
         timeout: float = 10.0,
         *,
         force_ipv4: bool = True,
-    ) -> "WebSocketTunnel":
-        ssl_ctx = ssl.create_default_context()
-        connect_host = host
+        resolved_ips: Sequence[str] = (),
+    ) -> WebSocketTunnel:
+        validate_host(host)
+        if not path.startswith("/") or any(ord(c) <= 32 or ord(c) >= 127 for c in path):
+            raise ValueError("Invalid relay path")
+        if any(any(ord(c) <= 31 or ord(c) >= 127 for c in k + v) for k, v in (headers or {}).items()):
+            raise ValueError("Invalid tunnel header")
+        authority = f"[{host}]" if ":" in host else host
+        uri = f"wss://{authority}:{port}{path}"
+        ssl_context = ssl.create_default_context()
+        udp = path.split("?", 1)[0].endswith("/udp")
 
-        if force_ipv4:
-            loop = asyncio.get_running_loop()
-            infos = await asyncio.wait_for(
-                loop.getaddrinfo(
-                    host,
-                    port,
-                    family=socket.AF_INET,
-                    type=socket.SOCK_STREAM,
-                ),
-                timeout=timeout,
-            )
-            if not infos:
-                raise WebSocketError(f"Relay {host!r} has no IPv4 address")
-            connect_host = infos[0][4][0]
+        async def establish() -> WebSocketTunnel:
+            targets = list(resolved_ips)
+            if targets:
+                for value in targets:
+                    ipaddress.IPv4Address(value)
+            elif force_ipv4:
+                infos = await asyncio.get_running_loop().getaddrinfo(
+                    host, port, family=socket.AF_INET, type=socket.SOCK_STREAM,
+                )
+                targets = list(dict.fromkeys(info[4][0] for info in infos))
+                if not targets:
+                    raise WebSocketError("Relay requires an IPv4 A record")
+            else:
+                targets = [host]
+            for index, target in enumerate(targets):
+                connection = None
+                try:
+                    connection = await connect(
+                        uri, host=target, port=port, ssl=ssl_context,
+                        # Preserve TLS hostname verification and SNI while pinning routing.
+                        server_hostname=host, proxy=None,
+                        additional_headers=headers, subprotocols=[SUBPROTOCOL],
+                        compression=None, max_size=MAX_MESSAGE, max_queue=MAX_QUEUE,
+                        open_timeout=timeout, close_timeout=3,
+                        ping_interval=20, ping_timeout=20, logger=WIRE_LOG,
+                    )
+                    if connection.subprotocol != SUBPROTOCOL:
+                        raise WebSocketError("Relay doesn't support WSVPN/1")
+                    # HTTP 101 alone doesn't prove authentication or destination connect.
+                    if await connection.recv() != READY:
+                        raise WebSocketError("Relay didn't acknowledge tunnel readiness")
+                    return cls(connection, udp=udp)
+                except BaseException as exc:
+                    if connection is not None:
+                        await connection.close()
+                    if isinstance(exc, asyncio.CancelledError):
+                        raise
+                    if isinstance(exc, OSError) and index + 1 < len(targets):
+                        continue
+                    if isinstance(exc, (ConnectionClosed, InvalidHandshake, OSError)):
+                        raise WebSocketError("Relay authentication, TLS, or destination connection failed") from None
+                    raise
+            raise WebSocketError("No relay address is available")
 
-        reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(
-                connect_host,
-                port,
-                ssl=ssl_ctx,
-                server_hostname=host,
-            ),
-            timeout=timeout,
-        )
-
-        key = base64.b64encode(os.urandom(16)).decode("ascii")
-        request_headers = {
-            "Host": host,
-            "Upgrade": "websocket",
-            "Connection": "Upgrade",
-            "Sec-WebSocket-Key": key,
-            "Sec-WebSocket-Version": "13",
-        }
-        if headers:
-            request_headers.update(headers)
-
-        request = f"GET {path} HTTP/1.1\r\n" + "".join(
-            f"{name}: {value}\r\n" for name, value in request_headers.items()
-        ) + "\r\n"
-        writer.write(request.encode("ascii"))
-        await writer.drain()
-
-        status = await asyncio.wait_for(reader.readline(), timeout=timeout)
-        if not status.startswith(b"HTTP/1.1 101"):
-            body = status.decode("utf-8", errors="replace").strip()
-            writer.close()
-            await writer.wait_closed()
-            raise WebSocketError(f"WebSocket upgrade failed: {body}")
-
-        response_headers: Dict[str, str] = {}
-        while True:
-            line = await asyncio.wait_for(reader.readline(), timeout=timeout)
-            if line in (b"\r\n", b"\n", b""):
-                break
-            name, sep, value = line.decode("latin1").partition(":")
-            if sep:
-                response_headers[name.strip().lower()] = value.strip()
-
-        expected = base64.b64encode(
-            hashlib.sha1((key + _GUID).encode("ascii")).digest()
-        ).decode("ascii")
-        if response_headers.get("sec-websocket-accept") != expected:
-            writer.close()
-            await writer.wait_closed()
-            raise WebSocketError("Invalid Sec-WebSocket-Accept header")
-
-        return cls(reader, writer)
+        return await asyncio.wait_for(establish(), timeout=timeout)
 
     async def send(self, payload: bytes) -> None:
-        if self.closed:
-            raise WebSocketError("WebSocket is closed")
-        frame = self._build_frame(0x2, payload, mask=True)
-        async with self._send_lock:
-            if self.closed:
-                raise WebSocketError("WebSocket is closed")
-            self.writer.write(frame)
-            await self.writer.drain()
+        if self.closed or len(payload) > MAX_PAYLOAD:
+            raise WebSocketError("Tunnel is closed or message is too large")
+        await self.connection.send(payload if self.udp else DATA + payload)
 
-    async def recv(self) -> Optional[bytes]:
-        while not self.closed:
-            opcode, payload, fin = await self._read_frame()
-            if opcode == 0x8:
-                self.closed = True
+    async def send_eof(self) -> None:
+        if self.udp:
+            raise WebSocketError("UDP doesn't support half-close")
+        await self.connection.send(TCP_EOF)
+
+    async def recv(self) -> bytes | None:
+        try:
+            message = await self.connection.recv()
+        except ConnectionClosed as exc:
+            # A TCP connection must finish with EOF, not an ambiguous WS close.
+            if self.udp and exc.code == 1000:
                 return None
-            if opcode == 0x9:
-                async with self._send_lock:
-                    self.writer.write(self._build_frame(0xA, payload, mask=True))
-                    await self.writer.drain()
-                continue
-            if opcode == 0xA:
-                continue
-            if opcode not in (0x0, 0x1, 0x2):
-                raise WebSocketError(f"Unsupported opcode: {opcode}")
-
-            if fin and not self._fragment:
-                return payload
-            self._fragment.extend(payload)
-            if fin:
-                message = bytes(self._fragment)
-                self._fragment.clear()
-                return message
-        return None
+            raise WebSocketError("Relay connection closed") from None
+        if not isinstance(message, bytes):
+            raise WebSocketError("Text messages aren't supported")
+        if self.udp:
+            return message
+        try:
+            return decode_tcp(message)
+        except ValueError as exc:
+            raise WebSocketError(str(exc)) from None
 
     async def close(self) -> None:
-        if self.closed:
-            return
         self.closed = True
-        try:
-            async with self._send_lock:
-                self.writer.write(self._build_frame(0x8, b"", mask=True))
-                await self.writer.drain()
-        except Exception:
-            pass
-        self.writer.close()
-        try:
-            await self.writer.wait_closed()
-        except Exception:
-            pass
-
-    async def _read_frame(self):
-        header = await self.reader.readexactly(2)
-        b1, b2 = header
-        fin = bool(b1 & 0x80)
-        opcode = b1 & 0x0F
-        masked = bool(b2 & 0x80)
-        length = b2 & 0x7F
-
-        if length == 126:
-            length = struct.unpack(">H", await self.reader.readexactly(2))[0]
-        elif length == 127:
-            length = struct.unpack(">Q", await self.reader.readexactly(8))[0]
-
-        mask = await self.reader.readexactly(4) if masked else None
-        payload = await self.reader.readexactly(length)
-        if mask:
-            payload = bytes(byte ^ mask[i % 4] for i, byte in enumerate(payload))
-        return opcode, payload, fin
-
-    @staticmethod
-    def _build_frame(opcode: int, payload: bytes, mask: bool) -> bytes:
-        first = 0x80 | opcode
-        length = len(payload)
-        mask_bit = 0x80 if mask else 0
-        if length < 126:
-            header = bytes((first, mask_bit | length))
-        elif length < 65536:
-            header = bytes((first, mask_bit | 126)) + struct.pack(">H", length)
-        else:
-            header = bytes((first, mask_bit | 127)) + struct.pack(">Q", length)
-
-        if not mask:
-            return header + payload
-
-        key = os.urandom(4)
-        masked = bytes(byte ^ key[i % 4] for i, byte in enumerate(payload))
-        return header + key + masked
+        # Always close the underlying transport, including after a received close.
+        await self.connection.close()
