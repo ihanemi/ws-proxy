@@ -1,0 +1,111 @@
+name: VPN Windows Build
+
+on:
+  push:
+    branches:
+      - feature/vpn-mode
+    paths:
+      - "vpn/**"
+      - "relay/**"
+      - "vpn_windows.py"
+      - "packaging/vpn_windows.spec"
+      - "pyproject.toml"
+      - "THIRD_PARTY_NOTICES.md"
+      - ".github/workflows/vpn-windows-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-amd64:
+    runs-on: windows-latest
+    env:
+      TUN2SOCKS_VERSION: v2.7.0
+      TUN2SOCKS_SHA256: c5d46e9452f6c9cc7c15ab9158d6d6a0169ceecd6bca019ce476b49337d2be43
+      WINTUN_VERSION: 0.14.1
+      WINTUN_SHA256: 07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install project and PyInstaller
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install . "pyinstaller==6.22.2"
+
+      - name: Download verified tun2socks and Wintun
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force vendor/windows-amd64 | Out-Null
+
+          $tunZip = Join-Path $env:RUNNER_TEMP "tun2socks.zip"
+          $tunUrl = "https://github.com/xjasonlyu/tun2socks/releases/download/$env:TUN2SOCKS_VERSION/tun2socks-windows-amd64.zip"
+          Invoke-WebRequest -Uri $tunUrl -OutFile $tunZip
+          $tunHash = (Get-FileHash $tunZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($tunHash -ne $env:TUN2SOCKS_SHA256) {
+            throw "tun2socks SHA-256 mismatch: $tunHash"
+          }
+          $tunDir = Join-Path $env:RUNNER_TEMP "tun2socks"
+          Expand-Archive -Path $tunZip -DestinationPath $tunDir -Force
+          $tunExe = Get-ChildItem $tunDir -Recurse -File -Filter "tun2socks*.exe" | Select-Object -First 1
+          if (-not $tunExe) { throw "tun2socks executable not found in archive" }
+          Copy-Item $tunExe.FullName vendor/windows-amd64/tun2socks.exe -Force
+
+          $wintunZip = Join-Path $env:RUNNER_TEMP "wintun.zip"
+          $wintunUrl = "https://www.wintun.net/builds/wintun-$env:WINTUN_VERSION.zip"
+          Invoke-WebRequest -Uri $wintunUrl -OutFile $wintunZip
+          $wintunHash = (Get-FileHash $wintunZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($wintunHash -ne $env:WINTUN_SHA256) {
+            throw "Wintun SHA-256 mismatch: $wintunHash"
+          }
+          $wintunDir = Join-Path $env:RUNNER_TEMP "wintun"
+          Expand-Archive -Path $wintunZip -DestinationPath $wintunDir -Force
+          $wintunDll = Get-ChildItem $wintunDir -Recurse -File -Filter "wintun.dll" |
+            Where-Object { $_.FullName -match '[\\/]amd64[\\/]' } |
+            Select-Object -First 1
+          if (-not $wintunDll) { throw "AMD64 wintun.dll not found in official archive" }
+          Copy-Item $wintunDll.FullName vendor/windows-amd64/wintun.dll -Force
+
+          Get-Item vendor/windows-amd64/tun2socks.exe, vendor/windows-amd64/wintun.dll |
+            Select-Object Name, Length
+
+      - name: Compile and unit tests
+        shell: pwsh
+        run: |
+          python -m compileall -q vpn relay
+          python -m unittest discover -s tests -p "test_vpn_*.py" -v
+
+      - name: Build standalone EXE
+        shell: pwsh
+        run: python -m PyInstaller packaging/vpn_windows.spec --noconfirm --clean
+
+      - name: Smoke test executable
+        shell: pwsh
+        run: |
+          .\dist\WsVpn.exe --help
+          if ($LASTEXITCODE -ne 0) { throw "WsVpn.exe smoke test failed" }
+
+      - name: Generate checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash .\dist\WsVpn.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  WsVpn.exe" | Set-Content -NoNewline .\dist\WsVpn.exe.sha256
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: WsVpn-windows-amd64
+          path: |
+            dist/WsVpn.exe
+            dist/WsVpn.exe.sha256
+            THIRD_PARTY_NOTICES.md
+          if-no-files-found: error
