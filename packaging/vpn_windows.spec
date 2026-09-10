@@ -29,6 +29,7 @@ a = Analysis(
         "vpn.socks5",
         "vpn.udp_protocol",
         "vpn.websocket",
+        "vpn.windows_guard",
         "vpn.windows_tun",
     ],
     hookspath=[],
