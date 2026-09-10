@@ -30,11 +30,13 @@ $process = $null
 
 try {
     Write-Host "[1/6] Starting WS VPN..."
-    $process = Start-Process \
-        -FilePath $resolvedClient \
-        -ArgumentList @("--relay", $Relay, "--tun", "--tun-name", $TunName) \
-        -PassThru \
-        -NoNewWindow
+    $startArgs = @{
+        FilePath = $resolvedClient
+        ArgumentList = @("--relay", $Relay, "--tun", "--tun-name", $TunName)
+        PassThru = $true
+        NoNewWindow = $true
+    }
+    $process = Start-Process @startArgs
 
     $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
     do {
