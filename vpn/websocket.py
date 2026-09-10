@@ -4,6 +4,7 @@ import asyncio
 import base64
 import hashlib
 import os
+import socket
 import ssl
 import struct
 from typing import Dict, Optional
@@ -32,10 +33,34 @@ class WebSocketTunnel:
         path: str,
         headers: Optional[Dict[str, str]] = None,
         timeout: float = 10.0,
+        *,
+        force_ipv4: bool = True,
     ) -> "WebSocketTunnel":
         ssl_ctx = ssl.create_default_context()
+        connect_host = host
+
+        if force_ipv4:
+            loop = asyncio.get_running_loop()
+            infos = await asyncio.wait_for(
+                loop.getaddrinfo(
+                    host,
+                    port,
+                    family=socket.AF_INET,
+                    type=socket.SOCK_STREAM,
+                ),
+                timeout=timeout,
+            )
+            if not infos:
+                raise WebSocketError(f"Relay {host!r} has no IPv4 address")
+            connect_host = infos[0][4][0]
+
         reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port, ssl=ssl_ctx, server_hostname=host),
+            asyncio.open_connection(
+                connect_host,
+                port,
+                ssl=ssl_ctx,
+                server_hostname=host,
+            ),
             timeout=timeout,
         )
 
