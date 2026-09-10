@@ -11,6 +11,7 @@ on:
       - "tests/test_vpn_*.py"
       - "vpn_windows.py"
       - "packaging/vpn_windows.spec"
+      - "packaging/WsVpn.iss"
       - "pyproject.toml"
       - "THIRD_PARTY_NOTICES.md"
       - ".github/workflows/vpn-windows-build.yml"
@@ -27,6 +28,8 @@ jobs:
       TUN2SOCKS_SHA256: c5d46e9452f6c9cc7c15ab9158d6d6a0169ceecd6bca019ce476b49337d2be43
       WINTUN_VERSION: 0.14.1
       WINTUN_SHA256: 07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51
+      INNO_VERSION: 7.1.0
+      INNO_TAG: is-7_1_0
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -41,7 +44,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          python -m pip install . "pyinstaller==6.22.2"
+          python -m pip install ".[gui]" "pyinstaller==6.22.2"
 
       - name: Download verified tun2socks and Wintun
         shell: pwsh
@@ -77,14 +80,17 @@ jobs:
           if (-not $wintunDll) { throw "AMD64 wintun.dll not found in official archive" }
           Copy-Item $wintunDll.FullName vendor/windows-amd64/wintun.dll -Force
 
-          Get-Item vendor/windows-amd64/tun2socks.exe, vendor/windows-amd64/wintun.dll |
-            Select-Object Name, Length
-
       - name: Compile and unit tests
         shell: pwsh
         run: |
           python -m compileall -q vpn relay
           python -m unittest discover -s tests -p "test_vpn_*.py" -v
+          python -c "import vpn.gui, vpn.settings"
+
+      - name: Verify Windows DPAPI token storage
+        shell: pwsh
+        run: |
+          python -c "from vpn.settings import protect_token, unprotect_token; value=protect_token('ci-secret-token'); assert 'ci-secret-token' not in value; assert unprotect_token(value) == 'ci-secret-token'"
 
       - name: Validate PowerShell E2E script syntax
         shell: pwsh
@@ -100,21 +106,55 @@ jobs:
             exit 1
           }
 
-      - name: Build standalone EXE
+      - name: Build standalone GUI EXE
         shell: pwsh
         run: python -m PyInstaller packaging/vpn_windows.spec --noconfirm --clean
 
-      - name: Smoke test executable
+      - name: Smoke test executable CLI path
         shell: pwsh
         run: |
-          .\dist\WsVpn.exe --help
-          if ($LASTEXITCODE -ne 0) { throw "WsVpn.exe smoke test failed" }
+          $p = Start-Process -FilePath .\dist\WsVpn.exe -ArgumentList "--help" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "WsVpn.exe --help smoke test failed: $($p.ExitCode)" }
 
-      - name: Generate checksum
+      - name: Install verified Inno Setup compiler
         shell: pwsh
         run: |
-          $hash = (Get-FileHash .\dist\WsVpn.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  WsVpn.exe" | Set-Content -NoNewline .\dist\WsVpn.exe.sha256
+          $ErrorActionPreference = "Stop"
+          $installer = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION-x64.exe"
+          $url = "https://github.com/jrsoftware/issrc/releases/download/$env:INNO_TAG/innosetup-$env:INNO_VERSION-x64.exe"
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          $signature = Get-AuthenticodeSignature $installer
+          if ($signature.Status -ne "Valid") {
+            throw "Inno Setup Authenticode signature is not valid: $($signature.Status)"
+          }
+          if ($signature.SignerCertificate.Subject -notmatch "Pyrsys B\.V\.") {
+            throw "Unexpected Inno Setup signer: $($signature.SignerCertificate.Subject)"
+          }
+          $installDir = Join-Path $env:RUNNER_TEMP "InnoSetup7"
+          $proc = Start-Process -FilePath $installer -ArgumentList @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=$installDir"
+          ) -Wait -PassThru
+          if ($proc.ExitCode -ne 0) { throw "Inno Setup install failed: $($proc.ExitCode)" }
+          $iscc = Get-ChildItem $installDir -Recurse -File -Filter ISCC.exe | Select-Object -First 1
+          if (-not $iscc) { throw "ISCC.exe was not found" }
+          $iscc.FullName | Set-Content -NoNewline $env:RUNNER_TEMP\iscc-path.txt
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $iscc = Get-Content $env:RUNNER_TEMP\iscc-path.txt
+          & $iscc .\packaging\WsVpn.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed: $LASTEXITCODE" }
+          if (-not (Test-Path .\dist\WsVpn-Setup-x64.exe)) { throw "Installer output not found" }
+
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          foreach ($file in @("WsVpn.exe", "WsVpn-Setup-x64.exe")) {
+            $path = Join-Path .\dist $file
+            $hash = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $file" | Set-Content -NoNewline "$path.sha256"
+          }
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v7
@@ -123,6 +163,8 @@ jobs:
           path: |
             dist/WsVpn.exe
             dist/WsVpn.exe.sha256
+            dist/WsVpn-Setup-x64.exe
+            dist/WsVpn-Setup-x64.exe.sha256
             THIRD_PARTY_NOTICES.md
             scripts/windows_e2e.ps1
           if-no-files-found: error
