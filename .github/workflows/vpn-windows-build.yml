@@ -7,6 +7,8 @@ on:
     paths:
       - "vpn/**"
       - "relay/**"
+      - "scripts/windows_e2e.ps1"
+      - "tests/test_vpn_*.py"
       - "vpn_windows.py"
       - "packaging/vpn_windows.spec"
       - "pyproject.toml"
@@ -84,6 +86,20 @@ jobs:
           python -m compileall -q vpn relay
           python -m unittest discover -s tests -p "test_vpn_*.py" -v
 
+      - name: Validate PowerShell E2E script syntax
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path .\scripts\windows_e2e.ps1),
+            [ref]$null,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+
       - name: Build standalone EXE
         shell: pwsh
         run: python -m PyInstaller packaging/vpn_windows.spec --noconfirm --clean
@@ -108,4 +124,5 @@ jobs:
             dist/WsVpn.exe
             dist/WsVpn.exe.sha256
             THIRD_PARTY_NOTICES.md
+            scripts/windows_e2e.ps1
           if-no-files-found: error
