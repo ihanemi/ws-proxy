@@ -31,14 +31,34 @@ TCP uses one WebSocket stream per SOCKS5 CONNECT request. UDP uses SOCKS5 UDP AS
 - IPv4 DNS configuration on the TUN adapter: implemented
 - Relay-route loop protection: implemented
 - Relay WSS transport pinned to IPv4: implemented
+- Persistent Windows firewall kill switch: implemented
+- Crash-state persistence and `--cleanup` recovery: implemented
+- tun2socks child-process monitoring: implemented
 - Standalone TCP/UDP WSS relay: implemented
 - Protocol/unit CI: implemented
 - Self-contained Windows AMD64 build: implemented
+- Windows end-to-end/crash-recovery probe: implemented
 - Cloudflare Worker relay: experimental TCP fallback only; Cloudflare restrictions prevent it from being a complete Internet tunnel
 
 The relay transport itself is deliberately IPv4-pinned on the client. This keeps the control/data WebSocket connection outside the `::/0` TUN route while IPv6 application traffic is carried inside the VPN. Therefore the relay hostname needs an IPv4 A record for Windows system-wide mode.
 
-This project still doesn't implement a firewall-based kill switch. If the VPN process or TUN fails unexpectedly, Windows may fall back to another available route. Treat this branch as alpha until it has been exercised end-to-end on real Windows hosts and a kill switch is added.
+## Kill switch and crash recovery
+
+System-wide Windows mode enables a firewall kill switch by default. It creates persistent outbound block rules on the physical interface for public IPv4/IPv6 destinations while excluding the resolved IPv4 relay endpoints. Loopback, RFC1918/CGNAT/link-local LAN ranges, and multicast scopes remain reachable.
+
+The rules are persistent on purpose. If `WsVpn.exe`, Python, or `tun2socks` dies unexpectedly, public traffic on the physical interface remains blocked instead of silently falling back outside the VPN. A normal graceful shutdown removes the rules.
+
+Session recovery metadata is stored in `%ProgramData%\WsVpn\state.json`. It records the TUN name, primary interface/gateway, relay host-route IPs, and the tun2socks PID/path so recovery only targets state created by WS VPN.
+
+After a hard crash, either start the VPN again or run the following from an elevated PowerShell to restore the recorded routes/firewall state:
+
+```powershell
+.\WsVpn.exe --cleanup
+```
+
+When running from source, use `ws-vpn --cleanup` instead.
+
+`--no-kill-switch` disables the firewall guard and is intended only for debugging. `--no-ipv6` disables IPv6 TUN routing; when the kill switch remains enabled, public native IPv6 is still blocked rather than allowed to bypass the VPN.
 
 ## Windows standalone build
 
@@ -47,6 +67,7 @@ The `VPN Windows Build` GitHub Actions workflow builds the `WsVpn-windows-amd64`
 - `WsVpn.exe`
 - `WsVpn.exe.sha256`
 - `THIRD_PARTY_NOTICES.md`
+- `scripts/windows_e2e.ps1`
 
 The EXE bundles the verified Windows AMD64 tun2socks runtime and signed Wintun DLL, so they don't need to be installed separately when using this build.
 
@@ -56,7 +77,7 @@ The build currently pins:
 - Wintun `0.14.1`
 - PyInstaller `6.22.2`
 
-The workflow verifies the downloaded tun2socks and Wintun archives against pinned SHA-256 digests before packaging and smoke-tests `WsVpn.exe --help` before uploading the artifact.
+The workflow verifies the downloaded tun2socks and Wintun archives against pinned SHA-256 digests before packaging, unit-tests the kill-switch/state logic, syntax-checks the PowerShell E2E probe, and smoke-tests `WsVpn.exe --help` before uploading the artifact.
 
 ## Install from source
 
@@ -100,7 +121,7 @@ $env:WS_VPN_TOKEN='replace-with-the-same-token'
   --udp-timeout 2m
 ```
 
-IPv6 routing is enabled by default. `--no-ipv6` disables the IPv6 TUN route for troubleshooting, but doing so can allow native IPv6 traffic to bypass the VPN on hosts that have IPv6 connectivity.
+IPv6 routing and the kill switch are enabled by default.
 
 ## Run system-wide mode from source
 
@@ -116,7 +137,22 @@ ws-vpn `
   --udp-timeout 2m
 ```
 
-The client detects the primary IPv4 route, resolves the relay before installing the TUN routes, adds IPv4 host-route exceptions for the relay, configures IPv4 and IPv6 on the Wintun adapter, installs `0.0.0.0/0` and `::/0` TUN routes, configures DNS, and removes the routes it added on graceful shutdown.
+The client detects the primary IPv4 route, resolves the relay before installing the TUN routes, adds IPv4 host-route exceptions for the relay, enables the fail-closed firewall guard, configures IPv4 and IPv6 on the Wintun adapter, installs `0.0.0.0/0` and `::/0` TUN routes, configures DNS, monitors tun2socks, and removes its state on graceful shutdown.
+
+## Windows end-to-end test
+
+After deploying a real WSS relay and downloading the Windows artifact, run this from an elevated PowerShell:
+
+```powershell
+.\scripts\windows_e2e.ps1 `
+  -Relay 'wss://vpn.example.com/tunnel' `
+  -Token 'replace-with-the-same-token' `
+  -ClientPath '.\WsVpn.exe'
+```
+
+The probe validates the IPv4 and IPv6 TUN routes, persistent firewall rules, UDP DNS, and IPv4 HTTPS. It then deliberately force-kills the client, confirms that the kill switch survived the crash, and runs `--cleanup` in a `finally` block. Use `-TestIpv6Internet` to additionally require a successful IPv6 HTTPS request through a relay host that has working IPv6 egress.
+
+This E2E script intentionally modifies routes and Windows Firewall state while it runs. Use it only from an elevated shell on a test machine or when temporary connectivity interruption is acceptable.
 
 ## UDP security behavior
 
