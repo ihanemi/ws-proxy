@@ -15,8 +15,10 @@ from .config import VpnConfig
 
 
 TUN_NAME = "wsvpn"
-TUN_IP = "192.168.123.1"
-TUN_MASK = "255.255.255.0"
+TUN_IPV4 = "192.168.123.1"
+TUN_IPV4_MASK = "255.255.255.0"
+TUN_IPV6 = "fd42:4242:4242::1"
+TUN_IPV6_PREFIX = 64
 
 
 @dataclass(frozen=True)
@@ -33,16 +35,24 @@ def is_admin() -> bool:
         return False
 
 
-def _powershell_json(script: str):
-    result = subprocess.run(
-        ["powershell", "-NoProfile", "-Command", script],
-        check=True,
+def _powershell(script: str, *, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+        check=check,
         capture_output=True,
         text=True,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
+
+
+def _powershell_json(script: str):
+    result = _powershell(script)
     text = result.stdout.strip()
     return json.loads(text) if text else None
+
+
+def _ps_quote(value: str) -> str:
+    return value.replace("'", "''")
 
 
 def get_primary_route() -> PrimaryRoute:
@@ -64,13 +74,15 @@ def get_primary_route() -> PrimaryRoute:
 
 
 def resolve_relay_ipv4(host: str, port: int) -> List[str]:
-    addresses = []
+    addresses: List[str] = []
     for info in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
         ip = info[4][0]
         if ip not in addresses:
             addresses.append(ip)
     if not addresses:
-        raise RuntimeError(f"Could not resolve relay host: {host}")
+        raise RuntimeError(
+            f"Relay host {host!r} has no IPv4 address; Windows TUN mode requires an A record"
+        )
     return addresses
 
 
@@ -93,6 +105,7 @@ class WindowsTun:
         *,
         dns_server: str = "1.1.1.1",
         udp_timeout: str = "2m",
+        ipv6: bool = True,
     ):
         if os.name != "nt":
             raise RuntimeError("WindowsTun can only run on Windows")
@@ -107,6 +120,7 @@ class WindowsTun:
         self.tun_name = tun_name
         self.dns_server = str(dns)
         self.udp_timeout = udp_timeout
+        self.ipv6 = ipv6
         self.tun2socks_path = shutil.which(tun2socks_path) or tun2socks_path
         self.primary: Optional[PrimaryRoute] = None
         self.relay_ips: List[str] = []
@@ -118,6 +132,12 @@ class WindowsTun:
         if not os.path.exists(self.tun2socks_path) and not shutil.which(self.tun2socks_path):
             raise FileNotFoundError(f"tun2socks not found: {self.tun2socks_path}")
 
+        wintun_path = os.path.join(os.path.dirname(os.path.abspath(self.tun2socks_path)), "wintun.dll")
+        if not os.path.exists(wintun_path):
+            raise FileNotFoundError(
+                f"wintun.dll must be next to tun2socks: {wintun_path}"
+            )
+
         self.primary = get_primary_route()
         self.relay_ips = resolve_relay_ipv4(self.config.relay_host, self.config.relay_port)
 
@@ -128,20 +148,15 @@ class WindowsTun:
             "--interface", self.primary.interface_alias,
             "--udp-timeout", self.udp_timeout,
             "--loglevel", "info",
+            cwd=os.path.dirname(os.path.abspath(self.tun2socks_path)) or None,
         )
 
         await self._wait_for_adapter()
-        _run(
-            "netsh", "interface", "ipv4", "set", "address",
-            f"name={self.tun_name}", "source=static",
-            f"address={TUN_IP}", f"mask={TUN_MASK}", "gateway=none",
-        )
-        _run(
-            "netsh", "interface", "ipv4", "set", "dnsservers",
-            f"name={self.tun_name}", "source=static",
-            f"address={self.dns_server}", "register=none", "validate=no",
-        )
+        self._configure_ipv4()
 
+        # The relay transport is intentionally IPv4-pinned. Add its host routes
+        # before installing either default TUN route so the control channel can
+        # never recursively enter the VPN.
         for ip in self.relay_ips:
             _run(
                 "route", "add", ip, "mask", "255.255.255.255",
@@ -151,14 +166,46 @@ class WindowsTun:
 
         _run(
             "netsh", "interface", "ipv4", "add", "route",
-            "0.0.0.0/0", self.tun_name, TUN_IP, "metric=1",
+            "0.0.0.0/0", self.tun_name, TUN_IPV4, "metric=1",
         )
 
+        if self.ipv6:
+            self._configure_ipv6()
+
+    def _configure_ipv4(self) -> None:
+        _run(
+            "netsh", "interface", "ipv4", "set", "address",
+            f"name={self.tun_name}", "source=static",
+            f"address={TUN_IPV4}", f"mask={TUN_IPV4_MASK}", "gateway=none",
+        )
+        _run(
+            "netsh", "interface", "ipv4", "set", "dnsservers",
+            f"name={self.tun_name}", "source=static",
+            f"address={self.dns_server}", "register=none", "validate=no",
+        )
+
+    def _configure_ipv6(self) -> None:
+        alias = _ps_quote(self.tun_name)
+        script = (
+            f"$a = Get-NetAdapter -Name '{alias}' -ErrorAction Stop; "
+            "$idx = $a.ifIndex; "
+            f"Get-NetRoute -InterfaceIndex $idx -AddressFamily IPv6 -DestinationPrefix '::/0' "
+            "-ErrorAction SilentlyContinue | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue; "
+            f"Get-NetIPAddress -InterfaceIndex $idx -AddressFamily IPv6 -IPAddress '{TUN_IPV6}' "
+            "-ErrorAction SilentlyContinue | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue; "
+            f"New-NetIPAddress -InterfaceIndex $idx -IPAddress '{TUN_IPV6}' "
+            f"-PrefixLength {TUN_IPV6_PREFIX} -AddressFamily IPv6 -PolicyStore ActiveStore | Out-Null; "
+            "New-NetRoute -DestinationPrefix '::/0' -InterfaceIndex $idx -NextHop '::' "
+            "-RouteMetric 1 -PolicyStore ActiveStore | Out-Null"
+        )
+        _powershell(script)
+
     async def _wait_for_adapter(self) -> None:
-        for _ in range(50):
-            result = _run(
-                "powershell", "-NoProfile", "-Command",
-                f"if (Get-NetAdapter -Name '{self.tun_name}' -ErrorAction SilentlyContinue) {{ exit 0 }} else {{ exit 1 }}",
+        alias = _ps_quote(self.tun_name)
+        for _ in range(80):
+            result = _powershell(
+                f"if (Get-NetAdapter -Name '{alias}' -ErrorAction SilentlyContinue) "
+                "{ exit 0 } else { exit 1 }",
                 check=False,
             )
             if result.returncode == 0:
@@ -173,6 +220,21 @@ class WindowsTun:
             "netsh", "interface", "ipv4", "delete", "route",
             "0.0.0.0/0", self.tun_name, check=False,
         )
+
+        if self.ipv6:
+            alias = _ps_quote(self.tun_name)
+            _powershell(
+                f"$a = Get-NetAdapter -Name '{alias}' -ErrorAction SilentlyContinue; "
+                "if ($a) { "
+                "$idx = $a.ifIndex; "
+                "Get-NetRoute -InterfaceIndex $idx -AddressFamily IPv6 -DestinationPrefix '::/0' "
+                "-ErrorAction SilentlyContinue | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue; "
+                f"Get-NetIPAddress -InterfaceIndex $idx -AddressFamily IPv6 -IPAddress '{TUN_IPV6}' "
+                "-ErrorAction SilentlyContinue | Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue "
+                "}",
+                check=False,
+            )
+
         if self.primary:
             for ip in self.relay_ips:
                 _run("route", "delete", ip, check=False)
