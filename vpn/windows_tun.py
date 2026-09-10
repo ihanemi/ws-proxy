@@ -12,6 +12,14 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from .config import VpnConfig
+from .windows_guard import (
+    GuardState,
+    cleanup_stale_state,
+    clear_state,
+    install_kill_switch,
+    remove_kill_switch,
+    save_state,
+)
 
 
 TUN_NAME = "wsvpn"
@@ -106,6 +114,7 @@ class WindowsTun:
         dns_server: str = "1.1.1.1",
         udp_timeout: str = "2m",
         ipv6: bool = True,
+        kill_switch: bool = True,
     ):
         if os.name != "nt":
             raise RuntimeError("WindowsTun can only run on Windows")
@@ -121,10 +130,12 @@ class WindowsTun:
         self.dns_server = str(dns)
         self.udp_timeout = udp_timeout
         self.ipv6 = ipv6
+        self.kill_switch = kill_switch
         self.tun2socks_path = shutil.which(tun2socks_path) or tun2socks_path
         self.primary: Optional[PrimaryRoute] = None
         self.relay_ips: List[str] = []
         self.process: Optional[asyncio.subprocess.Process] = None
+        self._state: Optional[GuardState] = None
 
     async def start(self) -> None:
         if not is_admin():
@@ -138,8 +149,39 @@ class WindowsTun:
                 f"wintun.dll must be next to tun2socks: {wintun_path}"
             )
 
+        # A previous hard crash intentionally leaves the kill switch behind.
+        # On a new explicit start, recover that recorded session before building
+        # a fresh fail-closed state.
+        cleanup_stale_state()
+
         self.primary = get_primary_route()
         self.relay_ips = resolve_relay_ipv4(self.config.relay_host, self.config.relay_port)
+
+        # Pin the relay outside the future default TUN route first. The firewall
+        # rules exclude these exact IPv4 endpoints so the WSS control channel
+        # remains reachable while other public traffic is fail-closed.
+        for ip in self.relay_ips:
+            _run(
+                "route", "add", ip, "mask", "255.255.255.255",
+                self.primary.gateway, "if", str(self.primary.interface_index),
+                "metric", "1",
+            )
+
+        if self.kill_switch:
+            install_kill_switch(self.primary.interface_alias, self.relay_ips)
+
+        self._state = GuardState(
+            version=1,
+            tun_name=self.tun_name,
+            primary_interface_alias=self.primary.interface_alias,
+            primary_interface_index=self.primary.interface_index,
+            primary_gateway=self.primary.gateway,
+            relay_ips=list(self.relay_ips),
+            ipv6=self.ipv6,
+            kill_switch=self.kill_switch,
+            tun2socks_path=os.path.abspath(self.tun2socks_path),
+        )
+        save_state(self._state)
 
         self.process = await asyncio.create_subprocess_exec(
             self.tun2socks_path,
@@ -150,19 +192,11 @@ class WindowsTun:
             "--loglevel", "info",
             cwd=os.path.dirname(os.path.abspath(self.tun2socks_path)) or None,
         )
+        self._state.tun2socks_pid = self.process.pid
+        save_state(self._state)
 
         await self._wait_for_adapter()
         self._configure_ipv4()
-
-        # The relay transport is intentionally IPv4-pinned. Add its host routes
-        # before installing either default TUN route so the control channel can
-        # never recursively enter the VPN.
-        for ip in self.relay_ips:
-            _run(
-                "route", "add", ip, "mask", "255.255.255.255",
-                self.primary.gateway, "if", str(self.primary.interface_index),
-                "metric", "1",
-            )
 
         _run(
             "netsh", "interface", "ipv4", "add", "route",
@@ -215,7 +249,17 @@ class WindowsTun:
             await asyncio.sleep(0.1)
         raise RuntimeError(f"TUN adapter '{self.tun_name}' did not appear")
 
-    async def stop(self) -> None:
+    async def wait(self) -> int:
+        if self.process is None:
+            raise RuntimeError("tun2socks has not been started")
+        return await self.process.wait()
+
+    async def stop(self, *, preserve_kill_switch: bool = False) -> None:
+        if preserve_kill_switch:
+            # On unexpected tun2socks death, leave the persistent firewall/state
+            # untouched. A later VPN start or `WsVpn.exe --cleanup` recovers it.
+            return
+
         _run(
             "netsh", "interface", "ipv4", "delete", "route",
             "0.0.0.0/0", self.tun_name, check=False,
@@ -235,10 +279,6 @@ class WindowsTun:
                 check=False,
             )
 
-        if self.primary:
-            for ip in self.relay_ips:
-                _run("route", "delete", ip, check=False)
-
         if self.process and self.process.returncode is None:
             self.process.terminate()
             try:
@@ -246,3 +286,18 @@ class WindowsTun:
             except asyncio.TimeoutError:
                 self.process.kill()
                 await self.process.wait()
+
+        if self.primary:
+            for ip in self.relay_ips:
+                destination = f"{ip}/32"
+                _powershell(
+                    f"Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '{destination}' "
+                    f"-InterfaceIndex {self.primary.interface_index} "
+                    f"-NextHop '{_ps_quote(self.primary.gateway)}' -ErrorAction SilentlyContinue "
+                    "| Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue",
+                    check=False,
+                )
+
+        if self.kill_switch:
+            remove_kill_switch()
+        clear_state()
