@@ -4,6 +4,7 @@ import base64
 import ctypes
 import json
 import os
+from ctypes import wintypes
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable
@@ -36,7 +37,7 @@ def config_path() -> Path:
 
 class _DATA_BLOB(ctypes.Structure):
     _fields_ = [
-        ("cbData", ctypes.c_uint32),
+        ("cbData", wintypes.DWORD),
         ("pbData", ctypes.POINTER(ctypes.c_ubyte)),
     ]
 
@@ -54,14 +55,44 @@ def _blob_bytes(blob: _DATA_BLOB) -> bytes:
     return ctypes.string_at(blob.pbData, blob.cbData)
 
 
+def _dpapi_functions():
+    crypt32 = ctypes.windll.crypt32
+    kernel32 = ctypes.windll.kernel32
+
+    crypt32.CryptProtectData.argtypes = [
+        ctypes.POINTER(_DATA_BLOB),
+        wintypes.LPCWSTR,
+        ctypes.POINTER(_DATA_BLOB),
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(_DATA_BLOB),
+    ]
+    crypt32.CryptProtectData.restype = wintypes.BOOL
+
+    crypt32.CryptUnprotectData.argtypes = [
+        ctypes.POINTER(_DATA_BLOB),
+        ctypes.POINTER(wintypes.LPWSTR),
+        ctypes.POINTER(_DATA_BLOB),
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(_DATA_BLOB),
+    ]
+    crypt32.CryptUnprotectData.restype = wintypes.BOOL
+
+    kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+    kernel32.LocalFree.restype = ctypes.c_void_p
+    return crypt32, kernel32
+
+
 def protect_token(token: str) -> str:
     if not token:
         return ""
     if os.name != "nt":
         raise RuntimeError("DPAPI token protection is only available on Windows")
 
-    crypt32 = ctypes.windll.crypt32
-    kernel32 = ctypes.windll.kernel32
+    crypt32, kernel32 = _dpapi_functions()
     in_blob, in_buffer = _blob(token.encode("utf-8"))
     entropy_blob, entropy_buffer = _blob(_ENTROPY)
     out_blob = _DATA_BLOB()
@@ -82,7 +113,7 @@ def protect_token(token: str) -> str:
     try:
         return base64.b64encode(_blob_bytes(out_blob)).decode("ascii")
     finally:
-        kernel32.LocalFree(out_blob.pbData)
+        kernel32.LocalFree(ctypes.cast(out_blob.pbData, ctypes.c_void_p))
 
 
 def unprotect_token(value: str) -> str:
@@ -91,8 +122,7 @@ def unprotect_token(value: str) -> str:
     if os.name != "nt":
         raise RuntimeError("DPAPI token protection is only available on Windows")
 
-    crypt32 = ctypes.windll.crypt32
-    kernel32 = ctypes.windll.kernel32
+    crypt32, kernel32 = _dpapi_functions()
     encrypted = base64.b64decode(value.encode("ascii"), validate=True)
     in_blob, in_buffer = _blob(encrypted)
     entropy_blob, entropy_buffer = _blob(_ENTROPY)
@@ -114,7 +144,7 @@ def unprotect_token(value: str) -> str:
     try:
         return _blob_bytes(out_blob).decode("utf-8")
     finally:
-        kernel32.LocalFree(out_blob.pbData)
+        kernel32.LocalFree(ctypes.cast(out_blob.pbData, ctypes.c_void_p))
 
 
 def save_settings(
