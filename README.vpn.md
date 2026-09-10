@@ -25,22 +25,32 @@ TCP uses one WebSocket stream per SOCKS5 CONNECT request. UDP uses SOCKS5 UDP AS
 - UDP datagram framing over WSS: implemented
 - Authenticated WSS transport: implemented
 - Windows Wintun/tun2socks orchestration: implemented
-- IPv4 default routing through the TUN: implemented
-- IPv6 default routing through the TUN: implemented
-- IPv6 TUN address (`fd42:4242:4242::1/64`): implemented
+- IPv4 and IPv6 default routing through the TUN: implemented
 - IPv4 DNS configuration on the TUN adapter: implemented
 - Relay-route loop protection: implemented
-- Relay WSS transport pinned to IPv4: implemented
 - Persistent Windows firewall kill switch: implemented
 - Crash-state persistence and `--cleanup` recovery: implemented
 - tun2socks child-process monitoring: implemented
+- GUI Connect/Disconnect controller: implemented
+- System tray Show/Connect/Disconnect/Quit: implemented
+- Persistent GUI settings: implemented
+- DPAPI-protected remembered token: implemented
 - Standalone TCP/UDP WSS relay: implemented
 - Protocol/unit CI: implemented
-- Self-contained Windows AMD64 build: implemented
+- Self-contained Windows AMD64 GUI build: implemented
+- Inno Setup Windows installer: implemented
 - Windows end-to-end/crash-recovery probe: implemented
 - Cloudflare Worker relay: experimental TCP fallback only; Cloudflare restrictions prevent it from being a complete Internet tunnel
 
 The relay transport itself is deliberately IPv4-pinned on the client. This keeps the control/data WebSocket connection outside the `::/0` TUN route while IPv6 application traffic is carried inside the VPN. Therefore the relay hostname needs an IPv4 A record for Windows system-wide mode.
+
+## GUI and tray
+
+Launching `WsVpn.exe` without command-line arguments opens the Windows GUI. Enter the WSS relay URL and shared token, then press **Connect**. The GUI also exposes DNS, TUN name, IPv6, kill-switch, secure-token-memory, and start-minimized settings.
+
+Closing the window hides it to the system tray instead of stopping the VPN. The tray menu exposes Show, Connect/Disconnect, and Quit. Quit performs a graceful VPN disconnect before the application exits.
+
+GUI settings are stored under `%APPDATA%\WsVpn\config.json`. When **Remember token securely** is enabled, the token is encrypted with Windows DPAPI for the current Windows user before it is written to disk; the plaintext token is not stored in the JSON configuration. Runtime logs are written to `%APPDATA%\WsVpn\ws-vpn.log`.
 
 ## Kill switch and crash recovery
 
@@ -50,7 +60,7 @@ The rules are persistent on purpose. If `WsVpn.exe`, Python, or `tun2socks` dies
 
 Session recovery metadata is stored in `%ProgramData%\WsVpn\state.json`. It records the TUN name, primary interface/gateway, relay host-route IPs, and the tun2socks PID/path so recovery only targets state created by WS VPN.
 
-After a hard crash, either start the VPN again or run the following from an elevated PowerShell to restore the recorded routes/firewall state:
+The GUI has a **Recover** button. The CLI equivalent is:
 
 ```powershell
 .\WsVpn.exe --cleanup
@@ -60,29 +70,40 @@ When running from source, use `ws-vpn --cleanup` instead.
 
 `--no-kill-switch` disables the firewall guard and is intended only for debugging. `--no-ipv6` disables IPv6 TUN routing; when the kill switch remains enabled, public native IPv6 is still blocked rather than allowed to bypass the VPN.
 
-## Windows standalone build
+## Windows build and installer
 
 The `VPN Windows Build` GitHub Actions workflow builds the `WsVpn-windows-amd64` artifact. It contains:
 
 - `WsVpn.exe`
 - `WsVpn.exe.sha256`
+- `WsVpn-Setup-x64.exe`
+- `WsVpn-Setup-x64.exe.sha256`
 - `THIRD_PARTY_NOTICES.md`
 - `scripts/windows_e2e.ps1`
 
-The EXE bundles the verified Windows AMD64 tun2socks runtime and signed Wintun DLL, so they don't need to be installed separately when using this build.
+`WsVpn.exe` is a windowed, administrator-elevated AMD64 build. It bundles the verified tun2socks runtime and signed Wintun DLL, so neither component needs to be installed separately. `WsVpn-Setup-x64.exe` installs the client under Program Files and creates a Start Menu shortcut; an optional desktop shortcut can be selected during setup. Uninstall runs WS VPN recovery first so stale routes/firewall state are removed.
 
 The build currently pins:
 
 - tun2socks `v2.7.0`
 - Wintun `0.14.1`
 - PyInstaller `6.22.2`
+- Inno Setup `7.1.0`
 
-The workflow verifies the downloaded tun2socks and Wintun archives against pinned SHA-256 digests before packaging, unit-tests the kill-switch/state logic, syntax-checks the PowerShell E2E probe, and smoke-tests `WsVpn.exe --help` before uploading the artifact.
+The workflow verifies the downloaded tun2socks and Wintun archives against pinned SHA-256 digests, validates the official Inno Setup Authenticode signature, performs a real Windows DPAPI round-trip test, unit-tests the VPN/kill-switch/settings logic, builds `WsVpn.exe`, smoke-tests its CLI path, compiles the installer, generates SHA-256 files, and uploads the final artifact.
 
 ## Install from source
 
+For the command-line client and relay:
+
 ```powershell
 python -m pip install -e .
+```
+
+For the Windows GUI/tray dependencies too:
+
+```powershell
+python -m pip install -e ".[gui]"
 ```
 
 When running from source in system-wide Windows mode, place `tun2socks.exe` and `wintun.dll` together in a directory and pass the executable path with `--tun2socks`. The client must be run as Administrator when `--tun` is enabled.
@@ -108,9 +129,9 @@ ws-vpn --relay wss://vpn.example.com/tunnel
 
 Applications can use SOCKS5 at `127.0.0.1:1080`. The server supports CONNECT and UDP ASSOCIATE.
 
-## Run the standalone Windows EXE
+## Run the standalone Windows EXE from CLI
 
-Open an elevated PowerShell and run:
+Launching `WsVpn.exe` with no arguments opens the GUI. Command-line arguments keep the CLI behavior available:
 
 ```powershell
 $env:WS_VPN_TOKEN='replace-with-the-same-token'
