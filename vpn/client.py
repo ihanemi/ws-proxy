@@ -18,6 +18,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tun", action="store_true", help="Enable system-wide Windows TUN mode")
     parser.add_argument("--tun2socks", default="tun2socks.exe", help="Path to tun2socks executable")
     parser.add_argument("--tun-name", default="wsvpn", help="Wintun adapter name")
+    parser.add_argument("--dns", default="1.1.1.1", help="IPv4 DNS server used by the TUN adapter")
+    parser.add_argument("--udp-timeout", default="2m", help="tun2socks UDP session timeout")
     parser.add_argument("--verbose", action="store_true")
     return parser
 
@@ -35,9 +37,17 @@ async def run(config: VpnConfig, args: argparse.Namespace) -> None:
                 raise RuntimeError("--tun currently supports Windows only")
             from .windows_tun import WindowsTun
 
-            tun = WindowsTun(config, args.tun2socks, args.tun_name)
+            tun = WindowsTun(
+                config,
+                args.tun2socks,
+                args.tun_name,
+                dns_server=args.dns,
+                udp_timeout=args.udp_timeout,
+            )
             await tun.start()
-            logging.getLogger("ws-vpn").info("System-wide VPN mode enabled")
+            logging.getLogger("ws-vpn").info(
+                "System-wide VPN mode enabled (TCP + UDP, DNS %s)", args.dns
+            )
 
         await socks_task
     finally:
