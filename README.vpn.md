@@ -1,17 +1,17 @@
 # WS VPN
 
-Experimental system-wide Windows VPN tunnel over WebSockets.
+Experimental system-wide Windows VPN tunnel over authenticated WebSockets.
 
 ## Architecture
 
 ```text
-Windows apps
+Windows apps (IPv4 + IPv6)
   -> Wintun
   -> tun2socks
   -> local SOCKS5 TCP/UDP (127.0.0.1:1080)
-  -> WSS
+  -> WSS over a pinned IPv4 relay connection
   -> ws-vpn-relay
-  -> destination TCP or UDP server
+  -> destination TCP or UDP server (IPv4 or IPv6)
 ```
 
 The VPN client and relay authenticate with a shared bearer token. The relay refuses loopback/private/reserved destinations and port 25.
@@ -25,22 +25,46 @@ TCP uses one WebSocket stream per SOCKS5 CONNECT request. UDP uses SOCKS5 UDP AS
 - UDP datagram framing over WSS: implemented
 - Authenticated WSS transport: implemented
 - Windows Wintun/tun2socks orchestration: implemented
-- DNS configuration on the TUN adapter: implemented
+- IPv4 default routing through the TUN: implemented
+- IPv6 default routing through the TUN: implemented
+- IPv6 TUN address (`fd42:4242:4242::1/64`): implemented
+- IPv4 DNS configuration on the TUN adapter: implemented
 - Relay-route loop protection: implemented
+- Relay WSS transport pinned to IPv4: implemented
 - Standalone TCP/UDP WSS relay: implemented
 - Protocol/unit CI: implemented
-- Cloudflare Worker relay: experimental TCP fallback only; Cloudflare blocks raw TCP connections to Cloudflare-owned IP ranges, so it cannot provide a complete Internet tunnel
-- Native IPv6 system-wide routing: not implemented yet
+- Self-contained Windows AMD64 build: implemented
+- Cloudflare Worker relay: experimental TCP fallback only; Cloudflare restrictions prevent it from being a complete Internet tunnel
 
-The current TUN path is IPv4 system-wide. TCP and UDP, including tunneled IPv4 DNS, are supported. Native IPv6 routing still needs its own TUN route and relay bypass handling before this should be treated as a leak-resistant production VPN.
+The relay transport itself is deliberately IPv4-pinned on the client. This keeps the control/data WebSocket connection outside the `::/0` TUN route while IPv6 application traffic is carried inside the VPN. Therefore the relay hostname needs an IPv4 A record for Windows system-wide mode.
 
-## Install client
+This project still doesn't implement a firewall-based kill switch. If the VPN process or TUN fails unexpectedly, Windows may fall back to another available route. Treat this branch as alpha until it has been exercised end-to-end on real Windows hosts and a kill switch is added.
+
+## Windows standalone build
+
+The `VPN Windows Build` GitHub Actions workflow builds the `WsVpn-windows-amd64` artifact. It contains:
+
+- `WsVpn.exe`
+- `WsVpn.exe.sha256`
+- `THIRD_PARTY_NOTICES.md`
+
+The EXE bundles the verified Windows AMD64 tun2socks runtime and signed Wintun DLL, so they don't need to be installed separately when using this build.
+
+The build currently pins:
+
+- tun2socks `v2.7.0`
+- Wintun `0.14.1`
+- PyInstaller `6.22.2`
+
+The workflow verifies the downloaded tun2socks and Wintun archives against pinned SHA-256 digests before packaging and smoke-tests `WsVpn.exe --help` before uploading the artifact.
+
+## Install from source
 
 ```powershell
 python -m pip install -e .
 ```
 
-For system-wide Windows mode, place `tun2socks.exe` and `wintun.dll` together in a directory. The client must be run as Administrator.
+When running from source in system-wide Windows mode, place `tun2socks.exe` and `wintun.dll` together in a directory and pass the executable path with `--tun2socks`. The client must be run as Administrator when `--tun` is enabled.
 
 ## Run the relay
 
@@ -63,7 +87,22 @@ ws-vpn --relay wss://vpn.example.com/tunnel
 
 Applications can use SOCKS5 at `127.0.0.1:1080`. The server supports CONNECT and UDP ASSOCIATE.
 
-## Run system-wide Windows TUN mode
+## Run the standalone Windows EXE
+
+Open an elevated PowerShell and run:
+
+```powershell
+$env:WS_VPN_TOKEN='replace-with-the-same-token'
+.\WsVpn.exe `
+  --relay wss://vpn.example.com/tunnel `
+  --tun `
+  --dns 1.1.1.1 `
+  --udp-timeout 2m
+```
+
+IPv6 routing is enabled by default. `--no-ipv6` disables the IPv6 TUN route for troubleshooting, but doing so can allow native IPv6 traffic to bypass the VPN on hosts that have IPv6 connectivity.
+
+## Run system-wide mode from source
 
 Run an elevated PowerShell:
 
@@ -77,9 +116,7 @@ ws-vpn `
   --udp-timeout 2m
 ```
 
-The client detects the primary IPv4 route, resolves the relay before installing the TUN default route, adds host-route exceptions for the relay, starts the Wintun adapter, configures its DNS server, and removes the added routes on shutdown.
-
-`tun2socks` must support SOCKS5 UDP. Current xjasonlyu/tun2socks releases support UDP through SOCKS5; keep `wintun.dll` next to the executable on Windows.
+The client detects the primary IPv4 route, resolves the relay before installing the TUN routes, adds IPv4 host-route exceptions for the relay, configures IPv4 and IPv6 on the Wintun adapter, installs `0.0.0.0/0` and `::/0` TUN routes, configures DNS, and removes the routes it added on graceful shutdown.
 
 ## UDP security behavior
 
