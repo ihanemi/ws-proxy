@@ -22,6 +22,7 @@ class WebSocketTunnel:
         self.writer = writer
         self.closed = False
         self._fragment = bytearray()
+        self._send_lock = asyncio.Lock()
 
     @classmethod
     async def connect(
@@ -85,8 +86,11 @@ class WebSocketTunnel:
         if self.closed:
             raise WebSocketError("WebSocket is closed")
         frame = self._build_frame(0x2, payload, mask=True)
-        self.writer.write(frame)
-        await self.writer.drain()
+        async with self._send_lock:
+            if self.closed:
+                raise WebSocketError("WebSocket is closed")
+            self.writer.write(frame)
+            await self.writer.drain()
 
     async def recv(self) -> Optional[bytes]:
         while not self.closed:
@@ -95,8 +99,9 @@ class WebSocketTunnel:
                 self.closed = True
                 return None
             if opcode == 0x9:
-                self.writer.write(self._build_frame(0xA, payload, mask=True))
-                await self.writer.drain()
+                async with self._send_lock:
+                    self.writer.write(self._build_frame(0xA, payload, mask=True))
+                    await self.writer.drain()
                 continue
             if opcode == 0xA:
                 continue
@@ -117,8 +122,9 @@ class WebSocketTunnel:
             return
         self.closed = True
         try:
-            self.writer.write(self._build_frame(0x8, b"", mask=True))
-            await self.writer.drain()
+            async with self._send_lock:
+                self.writer.write(self._build_frame(0x8, b"", mask=True))
+                await self.writer.drain()
         except Exception:
             pass
         self.writer.close()
