@@ -4,9 +4,29 @@ import argparse
 import asyncio
 import logging
 import os
+import shutil
+import sys
+from pathlib import Path
 
 from .config import VpnConfig
 from .socks5 import serve
+
+
+def _bundled_tun2socks() -> str:
+    candidates = []
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        candidates.append(Path(bundle_root) / "tun2socks.exe")
+    if getattr(sys, "frozen", False):
+        candidates.append(Path(sys.executable).resolve().parent / "tun2socks.exe")
+    candidates.append(Path.cwd() / "tun2socks.exe")
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+
+    found = shutil.which("tun2socks.exe")
+    return found or "tun2socks.exe"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -16,10 +36,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--listen-host", default="127.0.0.1")
     parser.add_argument("--listen-port", type=int, default=1080)
     parser.add_argument("--tun", action="store_true", help="Enable system-wide Windows TUN mode")
-    parser.add_argument("--tun2socks", default="tun2socks.exe", help="Path to tun2socks executable")
+    parser.add_argument(
+        "--tun2socks",
+        default=None,
+        help="Path to tun2socks executable; bundled Windows builds auto-detect it",
+    )
     parser.add_argument("--tun-name", default="wsvpn", help="Wintun adapter name")
     parser.add_argument("--dns", default="1.1.1.1", help="IPv4 DNS server used by the TUN adapter")
     parser.add_argument("--udp-timeout", default="2m", help="tun2socks UDP session timeout")
+    parser.add_argument(
+        "--no-ipv6",
+        action="store_true",
+        help="Disable IPv6 TUN routing; enabled by default in system-wide mode",
+    )
     parser.add_argument("--verbose", action="store_true")
     return parser
 
@@ -37,16 +66,20 @@ async def run(config: VpnConfig, args: argparse.Namespace) -> None:
                 raise RuntimeError("--tun currently supports Windows only")
             from .windows_tun import WindowsTun
 
+            tun2socks_path = args.tun2socks or _bundled_tun2socks()
             tun = WindowsTun(
                 config,
-                args.tun2socks,
+                tun2socks_path,
                 args.tun_name,
                 dns_server=args.dns,
                 udp_timeout=args.udp_timeout,
+                ipv6=not args.no_ipv6,
             )
             await tun.start()
             logging.getLogger("ws-vpn").info(
-                "System-wide VPN mode enabled (TCP + UDP, DNS %s)", args.dns
+                "System-wide VPN mode enabled (TCP + UDP, DNS %s, IPv6 %s)",
+                args.dns,
+                "on" if not args.no_ipv6 else "off",
             )
 
         await socks_task
