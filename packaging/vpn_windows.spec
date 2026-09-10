@@ -13,7 +13,6 @@ for name, path in required.items():
     if not os.path.isfile(path):
         raise SystemExit(f"Missing bundled runtime: {name} ({path})")
 
-icon_path = os.path.join(ROOT, "icon.ico")
 
 a = Analysis(
     [os.path.join(ROOT, "vpn_windows.py")],
@@ -24,8 +23,14 @@ a = Analysis(
     ],
     datas=[],
     hiddenimports=[
+        "PIL.Image",
+        "PIL.ImageDraw",
+        "pystray",
+        "pystray._win32",
         "vpn.client",
         "vpn.config",
+        "vpn.gui",
+        "vpn.settings",
         "vpn.socks5",
         "vpn.udp_protocol",
         "vpn.websocket",
@@ -52,8 +57,8 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    icon=icon_path if os.path.isfile(icon_path) else None,
+    uac_admin=True,
 )
