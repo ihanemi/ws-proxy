@@ -31,7 +31,7 @@ def _bundled_tun2socks() -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="WSS-backed VPN tunnel client")
-    parser.add_argument("--relay", required=True, help="Relay URL, e.g. wss://vpn.example.com/tunnel")
+    parser.add_argument("--relay", help="Relay URL, e.g. wss://vpn.example.com/tunnel")
     parser.add_argument("--token", default=os.getenv("WS_VPN_TOKEN"), help="Tunnel token (or WS_VPN_TOKEN)")
     parser.add_argument("--listen-host", default="127.0.0.1")
     parser.add_argument("--listen-port", type=int, default=1080)
@@ -47,7 +47,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-ipv6",
         action="store_true",
-        help="Disable IPv6 TUN routing; enabled by default in system-wide mode",
+        help="Disable IPv6 TUN routing; public IPv6 remains blocked when the kill switch is enabled",
+    )
+    parser.add_argument(
+        "--no-kill-switch",
+        action="store_true",
+        help="Disable the Windows fail-closed firewall guard (not recommended)",
+    )
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="Remove stale WS VPN routes/firewall state from a previous crash and exit",
     )
     parser.add_argument("--verbose", action="store_true")
     return parser
@@ -56,6 +66,8 @@ def build_parser() -> argparse.ArgumentParser:
 async def run(config: VpnConfig, args: argparse.Namespace) -> None:
     socks_task = asyncio.create_task(serve(config), name="socks5-server")
     tun = None
+    tun_task: asyncio.Task[int] | None = None
+    preserve_kill_switch = False
     try:
         await asyncio.sleep(0.1)
         if socks_task.done():
@@ -74,25 +86,66 @@ async def run(config: VpnConfig, args: argparse.Namespace) -> None:
                 dns_server=args.dns,
                 udp_timeout=args.udp_timeout,
                 ipv6=not args.no_ipv6,
+                kill_switch=not args.no_kill_switch,
             )
             await tun.start()
             logging.getLogger("ws-vpn").info(
-                "System-wide VPN mode enabled (TCP + UDP, DNS %s, IPv6 %s)",
+                "System-wide VPN enabled (TCP + UDP, DNS %s, IPv6 %s, kill switch %s)",
                 args.dns,
                 "on" if not args.no_ipv6 else "off",
+                "on" if not args.no_kill_switch else "off",
             )
 
-        await socks_task
+            tun_task = asyncio.create_task(tun.wait(), name="tun2socks-process")
+            done, _pending = await asyncio.wait(
+                (socks_task, tun_task),
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if tun_task in done:
+                return_code = tun_task.result()
+                preserve_kill_switch = not args.no_kill_switch
+                raise RuntimeError(
+                    f"tun2socks exited unexpectedly with code {return_code}; "
+                    "the kill switch remains active. Restart the VPN or run --cleanup as Administrator."
+                )
+            await socks_task
+        else:
+            await socks_task
     finally:
+        if tun_task and not tun_task.done():
+            tun_task.cancel()
+            await asyncio.gather(tun_task, return_exceptions=True)
         if tun:
-            await tun.stop()
+            await tun.stop(preserve_kill_switch=preserve_kill_switch)
         if not socks_task.done():
             socks_task.cancel()
             await asyncio.gather(socks_task, return_exceptions=True)
 
 
+def _cleanup_windows_state() -> None:
+    if os.name != "nt":
+        raise SystemExit("--cleanup is only supported on Windows")
+    from .windows_guard import cleanup_stale_state
+    from .windows_tun import is_admin
+
+    if not is_admin():
+        raise SystemExit("--cleanup must be run as Administrator")
+    recovered = cleanup_stale_state()
+    if recovered:
+        print("Recovered stale WS VPN state and removed the kill switch.")
+    else:
+        print("No recorded WS VPN session was found; stale WS VPN firewall rules were removed if present.")
+
+
 def main() -> None:
     args = build_parser().parse_args()
+
+    if args.cleanup:
+        _cleanup_windows_state()
+        return
+
+    if not args.relay:
+        raise SystemExit("Missing relay: pass --relay wss://host/tunnel")
     if not args.token:
         raise SystemExit("Missing token: pass --token or set WS_VPN_TOKEN")
 
@@ -110,6 +163,8 @@ def main() -> None:
         asyncio.run(run(config, args))
     except KeyboardInterrupt:
         pass
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 if __name__ == "__main__":
