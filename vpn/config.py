@@ -34,6 +34,18 @@ class VpnConfig:
         return path
 
     @property
+    def relay_udp_path(self) -> str:
+        parsed = self._parsed_relay()
+        path = parsed.path or "/tunnel"
+        if path.endswith("/tunnel"):
+            path = path[:-len("/tunnel")] + "/udp"
+        else:
+            path = path.rstrip("/") + "/udp"
+        if parsed.query:
+            path = f"{path}?{parsed.query}"
+        return path
+
+    @property
     def relay_port(self) -> int:
         parsed = self._parsed_relay()
         return parsed.port or 443
