@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import ctypes
+import ipaddress
 import json
 import os
 import shutil
@@ -48,7 +49,7 @@ def get_primary_route() -> PrimaryRoute:
     data = _powershell_json(
         "$r = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' "
         "| Where-Object {$_.NextHop -ne '0.0.0.0'} "
-        "| Sort-Object RouteMetric | Select-Object -First 1; "
+        "| Sort-Object RouteMetric, InterfaceMetric | Select-Object -First 1; "
         "$a = Get-NetAdapter -InterfaceIndex $r.InterfaceIndex; "
         "[pscustomobject]@{alias=$a.Name; index=$r.InterfaceIndex; gateway=$r.NextHop} "
         "| ConvertTo-Json -Compress"
@@ -84,11 +85,28 @@ def _run(*args: str, check: bool = True) -> subprocess.CompletedProcess:
 
 
 class WindowsTun:
-    def __init__(self, config: VpnConfig, tun2socks_path: str, tun_name: str = TUN_NAME):
+    def __init__(
+        self,
+        config: VpnConfig,
+        tun2socks_path: str,
+        tun_name: str = TUN_NAME,
+        *,
+        dns_server: str = "1.1.1.1",
+        udp_timeout: str = "2m",
+    ):
         if os.name != "nt":
             raise RuntimeError("WindowsTun can only run on Windows")
+        try:
+            dns = ipaddress.ip_address(dns_server)
+        except ValueError as exc:
+            raise ValueError("--dns must be an IP address") from exc
+        if not isinstance(dns, ipaddress.IPv4Address):
+            raise ValueError("--dns currently supports IPv4 only")
+
         self.config = config
         self.tun_name = tun_name
+        self.dns_server = str(dns)
+        self.udp_timeout = udp_timeout
         self.tun2socks_path = shutil.which(tun2socks_path) or tun2socks_path
         self.primary: Optional[PrimaryRoute] = None
         self.relay_ips: List[str] = []
@@ -108,6 +126,7 @@ class WindowsTun:
             "--device", f"tun://{self.tun_name}",
             "--proxy", f"socks5://{self.config.listen_host}:{self.config.listen_port}",
             "--interface", self.primary.interface_alias,
+            "--udp-timeout", self.udp_timeout,
             "--loglevel", "info",
         )
 
@@ -116,6 +135,11 @@ class WindowsTun:
             "netsh", "interface", "ipv4", "set", "address",
             f"name={self.tun_name}", "source=static",
             f"address={TUN_IP}", f"mask={TUN_MASK}", "gateway=none",
+        )
+        _run(
+            "netsh", "interface", "ipv4", "set", "dnsservers",
+            f"name={self.tun_name}", "source=static",
+            f"address={self.dns_server}", "register=none", "validate=no",
         )
 
         for ip in self.relay_ips:
