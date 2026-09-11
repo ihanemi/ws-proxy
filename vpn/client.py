@@ -4,30 +4,22 @@ import argparse
 import asyncio
 import logging
 import os
-import shutil
 import sys
 from pathlib import Path
 from typing import Callable
 
 from .config import VpnConfig
 from .socks5 import serve
+from .async_utils import cancel_and_join
 
 
 def _bundled_tun2socks() -> str:
-    candidates = []
     bundle_root = getattr(sys, "_MEIPASS", None)
     if bundle_root:
-        candidates.append(Path(bundle_root) / "tun2socks.exe")
-    if getattr(sys, "frozen", False):
-        candidates.append(Path(sys.executable).resolve().parent / "tun2socks.exe")
-    candidates.append(Path.cwd() / "tun2socks.exe")
-
-    for candidate in candidates:
+        candidate = Path(bundle_root) / "tun2socks.exe"
         if candidate.is_file():
             return str(candidate)
-
-    found = shutil.which("tun2socks.exe")
-    return found or "tun2socks.exe"
+    raise FileNotFoundError("Bundled runtime unavailable; from source, pass an explicit --tun2socks path")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -71,84 +63,60 @@ async def run(
     stop_event: asyncio.Event | None = None,
     on_ready: Callable[[], None] | None = None,
 ) -> None:
-    socks_task = asyncio.create_task(serve(config), name="socks5-server")
+    if args.tun:
+        if os.name != "nt":
+            raise RuntimeError("--tun currently supports Windows only")
+        from .windows_native import session_lock
+        with session_lock():
+            await _run_session(config, args, stop_event=stop_event, on_ready=on_ready)
+    else:
+        await _run_session(config, args, stop_event=stop_event, on_ready=on_ready)
+
+
+async def _run_session(config, args, *, stop_event=None, on_ready=None):
     tun = None
-    tun_task: asyncio.Task[int] | None = None
-    stop_task: asyncio.Task[bool] | None = None
-    preserve_kill_switch = False
+    tasks = []
+    clean_shutdown = False
     try:
-        await asyncio.sleep(0.1)
-        if socks_task.done():
-            await socks_task
-
         if args.tun:
-            if os.name != "nt":
-                raise RuntimeError("--tun currently supports Windows only")
             from .windows_tun import WindowsTun
-
-            tun2socks_path = args.tun2socks or _bundled_tun2socks()
             tun = WindowsTun(
-                config,
-                tun2socks_path,
-                args.tun_name,
-                dns_server=args.dns,
-                udp_timeout=args.udp_timeout,
-                ipv6=not args.no_ipv6,
-                kill_switch=not args.no_kill_switch,
+                config, args.tun2socks or _bundled_tun2socks(), args.tun_name,
+                dns_server=args.dns, udp_timeout=args.udp_timeout,
+                ipv6=not args.no_ipv6, kill_switch=not args.no_kill_switch,
             )
-            await tun.start()
-            logging.getLogger("ws-vpn").info(
-                "System-wide VPN enabled (TCP + UDP, DNS %s, IPv6 %s, kill switch %s)",
-                args.dns,
-                "on" if not args.no_ipv6 else "off",
-                "on" if not args.no_kill_switch else "off",
-            )
-            if on_ready:
-                on_ready()
-
-            tun_task = asyncio.create_task(tun.wait(), name="tun2socks-process")
-            waiters: list[asyncio.Task] = [socks_task, tun_task]
-            if stop_event is not None:
-                stop_task = asyncio.create_task(stop_event.wait(), name="vpn-stop-request")
-                waiters.append(stop_task)
-
-            done, _pending = await asyncio.wait(
-                waiters,
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            if stop_task is not None and stop_task in done:
-                return
-            if tun_task in done:
-                return_code = tun_task.result()
-                preserve_kill_switch = not args.no_kill_switch
-                raise RuntimeError(
-                    f"tun2socks exited unexpectedly with code {return_code}; "
-                    "the kill switch remains active. Restart the VPN or run --cleanup as Administrator."
-                )
+            config = await tun.prepare()
+        ready = asyncio.Event()
+        socks_task = asyncio.create_task(serve(config, ready=ready), name="socks5-server")
+        ready_task = asyncio.create_task(ready.wait())
+        tasks.extend((socks_task, ready_task))
+        done, _ = await asyncio.wait((socks_task, ready_task), return_when=asyncio.FIRST_COMPLETED)
+        if socks_task in done:
             await socks_task
-        else:
-            if on_ready:
-                on_ready()
-            if stop_event is None:
-                await socks_task
-            else:
-                stop_task = asyncio.create_task(stop_event.wait(), name="vpn-stop-request")
-                done, _pending = await asyncio.wait(
-                    (socks_task, stop_task),
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                if socks_task in done:
-                    await socks_task
-    finally:
-        for task in (stop_task, tun_task):
-            if task and not task.done():
-                task.cancel()
-                await asyncio.gather(task, return_exceptions=True)
+            raise RuntimeError("SOCKS listener stopped during startup")
         if tun:
-            await tun.stop(preserve_kill_switch=preserve_kill_switch)
-        if not socks_task.done():
-            socks_task.cancel()
-            await asyncio.gather(socks_task, return_exceptions=True)
+            await tun.start()
+            tasks.append(asyncio.create_task(tun.wait(), name="tun2socks-process"))
+        if on_ready:
+            on_ready()
+        stop_task = None
+        if stop_event is not None:
+            stop_task = asyncio.create_task(stop_event.wait(), name="vpn-stop-request")
+            tasks.append(stop_task)
+        waiters = [task for task in tasks if task is not ready_task]
+        done, _ = await asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED)
+        if stop_task is not None and stop_task in done:
+            clean_shutdown = True
+            return
+        for task in done:
+            task.result()
+        raise RuntimeError("VPN core stopped unexpectedly; kill switch retained. Run --cleanup after inspection.")
+    finally:
+        await cancel_and_join(*tasks)
+        if tun:
+            # All unexpected errors (including startup and SOCKS failure) retain
+            # the guard. Only an explicit disconnect releases its ownership.
+            await tun.stop(preserve_kill_switch=not clean_shutdown and not args.no_kill_switch)
 
 
 def _cleanup_windows_state() -> None:
@@ -163,7 +131,7 @@ def _cleanup_windows_state() -> None:
     if recovered:
         print("Recovered stale WS VPN state and removed the kill switch.")
     else:
-        print("No recorded WS VPN session was found; stale WS VPN firewall rules were removed if present.")
+        print("No recorded WS VPN session was found; no network resources were changed.")
 
 
 def main() -> None:
