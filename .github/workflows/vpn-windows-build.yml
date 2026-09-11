@@ -53,7 +53,6 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Force vendor/windows-amd64 | Out-Null
 
           $tunZip = Join-Path $env:RUNNER_TEMP "tun2socks.zip"
@@ -134,7 +133,6 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          $ErrorActionPreference = "Stop"
           $installer = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION-x64.exe"
           $url = "https://github.com/jrsoftware/issrc/releases/download/$env:INNO_TAG/innosetup-$env:INNO_VERSION-x64.exe"
           Invoke-WebRequest -Uri $url -OutFile $installer

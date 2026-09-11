@@ -65,6 +65,14 @@ def _ps_quote(value: str) -> str:
 
 def _powershell(script: str, *, check: bool = True) -> subprocess.CompletedProcess:
     executable = system_executable(r"WindowsPowerShell\v1.0\powershell.exe") if os.name == "nt" else "powershell"
+    environment = os.environ.copy()
+    if os.name == "nt":
+        # A PowerShell 7 parent (including GitHub Actions' pwsh shell) exports a
+        # PSModulePath containing Core-only modules.  Windows PowerShell 5.1 may
+        # select those incompatible modules before its inbox networking and ACL
+        # modules, making Get-Acl/Get-NetRoute fail to import.  Let 5.1 rebuild
+        # its own trusted default module path instead.
+        environment.pop("PSModulePath", None)
     result = subprocess.run(
         [executable, "-NoProfile", "-NonInteractive", "-Command",
          "$s=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String([Console]::In.ReadToEnd())); "
@@ -72,6 +80,7 @@ def _powershell(script: str, *, check: bool = True) -> subprocess.CompletedProce
         input=base64.b64encode(("$ErrorActionPreference='Stop'; try { " + script
                                + " } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }").encode("utf-16-le")).decode("ascii"),
         capture_output=True, text=True, timeout=60,
+        env=environment,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
     if check and result.returncode:

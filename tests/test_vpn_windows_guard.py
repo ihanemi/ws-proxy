@@ -156,3 +156,5 @@ class RecoverySafetyTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 _powershell("New-NetRoute")
             self.assertIn("$ErrorActionPreference='Stop'", base64.b64decode(run.call_args.kwargs["input"]).decode("utf-16-le"))
+            if os.name == "nt":
+                self.assertNotIn("PSModulePath", run.call_args.kwargs["env"])
