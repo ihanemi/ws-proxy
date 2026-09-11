@@ -1,5 +1,5 @@
 #define MyAppName "WS VPN"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.1.0-alpha.1"
 #define MyAppPublisher "ihanemi"
 #define MyAppExeName "WsVpn.exe"
 
@@ -7,7 +7,11 @@
 AppId={{4B6ED901-717D-4B01-9C61-01EAA188D5B8}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+VersionInfoVersion=0.1.0.1
 AppPublisher={#MyAppPublisher}
+AppPublisherURL=https://github.com/ihanemi/ws-proxy
+AppSupportURL=https://github.com/ihanemi/ws-proxy/issues
+AppUpdatesURL=https://github.com/ihanemi/ws-proxy/releases
 DefaultDirName={autopf}\WS VPN
 DefaultGroupName=WS VPN
 DisableProgramGroupPage=yes

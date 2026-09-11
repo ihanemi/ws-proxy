@@ -12,7 +12,9 @@ from tkinter import messagebox, ttk
 
 from .client import _bundled_tun2socks, run
 from .config import VpnConfig
-from .settings import AppSettings, config_path, load_settings, save_settings
+from .logging_setup import configure_file_logging
+from .settings import AppSettings, load_settings, save_settings
+from .version import __version__
 
 
 log = logging.getLogger("ws-vpn-gui")
@@ -56,7 +58,7 @@ class VpnGui:
             self.root.after(50, self.hide_window)
 
     def _configure_window(self) -> None:
-        self.root.title("WS VPN")
+        self.root.title(f"WS VPN {__version__}")
         self.root.geometry("470x430")
         self.root.minsize(450, 410)
         self.root.protocol("WM_DELETE_WINDOW", self.hide_window)
@@ -366,13 +368,7 @@ class VpnGui:
 
 
 def _configure_logging() -> None:
-    log_path = config_path().parent / "ws-vpn.log"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(
-        filename=str(log_path),
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+    configure_file_logging()
 
 
 def main() -> None:

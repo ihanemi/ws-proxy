@@ -53,6 +53,7 @@ exe = EXE(
     a.datas,
     [],
     name="WsVpn",
+    version=os.path.join(ROOT, "packaging", "version_info.txt"),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

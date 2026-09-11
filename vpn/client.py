@@ -12,6 +12,7 @@ from typing import Callable
 from .config import VpnConfig
 from .async_utils import cancel_and_join
 from .socks5 import serve
+from .version import __version__
 
 
 def _bundled_tun2socks() -> str:
@@ -25,6 +26,7 @@ def _bundled_tun2socks() -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="WSS-backed VPN tunnel client")
+    parser.add_argument("--version", action="version", version=f"WS VPN {__version__}")
     parser.add_argument("--relay", help="Relay URL, e.g. wss://vpn.example.com/tunnel")
     parser.add_argument("--token", default=os.getenv("WS_VPN_TOKEN"), help="Tunnel token (or WS_VPN_TOKEN)")
     parser.add_argument("--listen-host", default="127.0.0.1")
