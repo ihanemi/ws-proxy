@@ -29,7 +29,10 @@ jobs:
           cache: pip
 
       - name: Install
-        run: python -m pip install .
+        run: python -m pip install ".[dev]"
+
+      - name: Lint VPN implementation
+        run: python -m ruff check vpn relay tests/test_vpn_*.py
 
       - name: Compile
         run: python -m compileall -q vpn relay
@@ -37,5 +40,5 @@ jobs:
       - name: Import smoke test
         run: python -c "import vpn.client, vpn.socks5, vpn.websocket, relay.server"
 
-      - name: UDP protocol tests
+      - name: VPN protocol, transport and safety tests
         run: python -m unittest discover -s tests -p "test_vpn_*.py" -v

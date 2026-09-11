@@ -8,7 +8,6 @@ import os
 import queue
 import threading
 import tkinter as tk
-from pathlib import Path
 from tkinter import messagebox, ttk
 
 from .client import _bundled_tun2socks, run

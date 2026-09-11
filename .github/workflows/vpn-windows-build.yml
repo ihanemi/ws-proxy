@@ -43,12 +43,16 @@ jobs:
       - name: Install project and PyInstaller
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           python -m pip install --upgrade pip
-          python -m pip install ".[gui]" "pyinstaller==6.22.2"
+          python -m pip install ".[gui,dev]" "pyinstaller==6.22.2"
 
       - name: Download verified tun2socks and Wintun
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Force vendor/windows-amd64 | Out-Null
 
@@ -83,6 +87,9 @@ jobs:
       - name: Compile and unit tests
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m ruff check vpn relay tests/test_vpn_*.py
           python -m compileall -q vpn relay
           python -m unittest discover -s tests -p "test_vpn_*.py" -v
           python -c "import vpn.gui, vpn.settings"
@@ -90,11 +97,15 @@ jobs:
       - name: Verify Windows DPAPI token storage
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           python -c "from vpn.settings import protect_token, unprotect_token; value=protect_token('ci-secret-token'); assert 'ci-secret-token' not in value; assert unprotect_token(value) == 'ci-secret-token'"
 
       - name: Validate PowerShell E2E script syntax
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile(
             (Resolve-Path .\scripts\windows_e2e.ps1),
@@ -113,12 +124,16 @@ jobs:
       - name: Smoke test executable CLI path
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $p = Start-Process -FilePath .\dist\WsVpn.exe -ArgumentList "--help" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "WsVpn.exe --help smoke test failed: $($p.ExitCode)" }
 
       - name: Install verified Inno Setup compiler
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $ErrorActionPreference = "Stop"
           $installer = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION-x64.exe"
           $url = "https://github.com/jrsoftware/issrc/releases/download/$env:INNO_TAG/innosetup-$env:INNO_VERSION-x64.exe"
@@ -142,6 +157,8 @@ jobs:
       - name: Build Windows installer
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $iscc = Get-Content $env:RUNNER_TEMP\iscc-path.txt
           & $iscc .\packaging\WsVpn.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed: $LASTEXITCODE" }
@@ -150,6 +167,8 @@ jobs:
       - name: Generate checksums
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           foreach ($file in @("WsVpn.exe", "WsVpn-Setup-x64.exe")) {
             $path = Join-Path .\dist $file
             $hash = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
