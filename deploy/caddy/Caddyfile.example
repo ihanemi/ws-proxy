@@ -1,0 +1,21 @@
+vpn.example.com {
+    @tunnel path /tunnel /udp
+    reverse_proxy @tunnel 127.0.0.1:8765 {
+        flush_interval -1
+    }
+
+    @health path /healthz
+    reverse_proxy @health 127.0.0.1:8765
+
+    log {
+        output file /var/log/caddy/ws-vpn-access.log
+        format filter {
+            wrap json
+            fields {
+                request>headers>Authorization delete
+                request>headers>X-Tunnel-Host delete
+                request>headers>X-Tunnel-Port delete
+            }
+        }
+    }
+}

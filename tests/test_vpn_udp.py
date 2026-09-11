@@ -47,9 +47,9 @@ class VpnConfigTests(unittest.TestCase):
         cfg = VpnConfig("wss://vpn.example.com/tunnel", "secret")
         self.assertEqual(cfg.relay_udp_path, "/udp")
 
-    def test_udp_path_keeps_prefix_and_query(self):
-        cfg = VpnConfig("wss://vpn.example.com/ws/tunnel?edge=1", "secret")
-        self.assertEqual(cfg.relay_udp_path, "/ws/udp?edge=1")
+    def test_relay_query_is_rejected(self):
+        with self.assertRaises(ValueError):
+            VpnConfig("wss://vpn.example.com/ws/tunnel?edge=1", "secret")
 
 
 if __name__ == "__main__":

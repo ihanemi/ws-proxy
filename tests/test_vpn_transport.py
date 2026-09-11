@@ -133,6 +133,18 @@ class RelayTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(caught.exception.response.status_code, 401)
             resolve.assert_not_called()
 
+    async def test_health_check_does_not_create_a_tunnel(self):
+        reader, writer = await asyncio.open_connection(
+            "127.0.0.1", self.server.sockets[0].getsockname()[1]
+        )
+        writer.write(b"GET /healthz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        await writer.drain()
+        response = await reader.read()
+        writer.close()
+        await writer.wait_closed()
+        self.assertIn(b"200 OK", response)
+        self.assertIn(b"ok", response)
+
     async def test_duplicate_auth_rejected(self):
         with self.assertRaises(InvalidStatus) as caught:
             await self.dial(headers=[("Authorization", "Bearer " + TOKEN)] * 2)

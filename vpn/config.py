@@ -22,8 +22,8 @@ class VpnConfig:
         validate_token(self.token)
         parsed = self._parsed_relay()
         validate_host(parsed.hostname or "")
-        if parsed.username is not None or parsed.password is not None or parsed.fragment:
-            raise ValueError("Relay URL must not contain credentials or a fragment")
+        if parsed.username is not None or parsed.password is not None or parsed.query or parsed.fragment:
+            raise ValueError("Relay URL must not contain credentials, a query, or a fragment")
         if parsed.path and not parsed.path.endswith("/tunnel"):
             raise ValueError("Relay URL path must end in /tunnel")
         if any(ord(c) <= 32 or ord(c) >= 127 for c in self.relay_url):
@@ -59,8 +59,6 @@ class VpnConfig:
     def relay_path(self) -> str:
         parsed = self._parsed_relay()
         path = parsed.path or "/tunnel"
-        if parsed.query:
-            path = f"{path}?{parsed.query}"
         return path
 
     @property
@@ -71,8 +69,6 @@ class VpnConfig:
             path = path[:-len("/tunnel")] + "/udp"
         else:
             path = path.rstrip("/") + "/udp"
-        if parsed.query:
-            path = f"{path}?{parsed.query}"
         return path
 
     @property

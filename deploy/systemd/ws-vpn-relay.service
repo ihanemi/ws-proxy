@@ -1,0 +1,34 @@
+[Unit]
+Description=WS VPN relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ws-vpn
+Group=ws-vpn
+EnvironmentFile=/etc/ws-vpn-relay.env
+WorkingDirectory=/opt/ws-vpn
+ExecStart=/opt/ws-vpn/.venv/bin/ws-vpn-relay --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

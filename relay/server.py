@@ -149,6 +149,8 @@ class Relay:
         return LimitedConnection(*args, **kwargs)
 
     def process_request(self, connection, request):
+        if request.path == "/healthz":
+            return connection.respond(HTTPStatus.OK, "ok\n")
         auth = request.headers.get_all("Authorization")
         expected = f"Bearer {self.token}".encode("ascii")
         if len(auth) != 1 or not hmac.compare_digest(auth[0].encode("utf-8"), expected):
