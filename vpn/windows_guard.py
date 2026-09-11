@@ -377,5 +377,3 @@ def ipv6_kill_switch_networks() -> List[str]:
 def _chunks(values: Sequence[str], size: int = 48) -> Iterable[Sequence[str]]:
     for offset in range(0, len(values), size):
         yield values[offset : offset + size]
-
-
