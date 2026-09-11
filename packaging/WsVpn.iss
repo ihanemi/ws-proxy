@@ -39,5 +39,32 @@ Name: "{autodesktop}\WS VPN"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopi
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch WS VPN"; Flags: nowait postinstall skipifsilent
 
-[UninstallRun]
-Filename: "{app}\{#MyAppExeName}"; Parameters: "--cleanup"; Flags: runhidden waituntilterminated skipifdoesntexist
+[Code]
+function InitializeUninstall(): Boolean;
+var
+  ResultCode: Integer;
+  ClientPath: String;
+begin
+  ClientPath := ExpandConstant('{app}\{#MyAppExeName}');
+  Result := (not FileExists(ClientPath)) or
+    (Exec(ClientPath, '--cleanup', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and
+     (ResultCode = 0));
+  if not Result then
+    MsgBox(
+      'WS VPN could not safely clean its recorded networking state. ' +
+      'Disconnect the running client or repair recovery first, then uninstall again. ' +
+      'The recovery executable has been kept installed.',
+      mbError,
+      MB_OK
+    );
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  { Never execute an older, unverified cleanup implementation during upgrade. }
+  if FileExists(ExpandConstant('{commonappdata}\WsVpn\state.json')) then
+    Result :=
+      'An existing WS VPN networking session or crash journal is present. ' +
+      'Disconnect or recover it with the currently installed version before upgrading.';
+end;

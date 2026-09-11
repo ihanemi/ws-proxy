@@ -4,13 +4,14 @@ import argparse
 import asyncio
 import logging
 import os
+import signal
 import sys
 from pathlib import Path
 from typing import Callable
 
 from .config import VpnConfig
-from .socks5 import serve
 from .async_utils import cancel_and_join
+from .socks5 import serve
 
 
 def _bundled_tun2socks() -> str:
@@ -157,11 +158,30 @@ def main() -> None:
         listen_port=args.listen_port,
     )
     try:
-        asyncio.run(run(config, args))
-    except KeyboardInterrupt:
-        pass
-    except RuntimeError as exc:
+        asyncio.run(_run_until_signal(config, args))
+    except (RuntimeError, ValueError, OSError) as exc:
         raise SystemExit(str(exc)) from exc
+
+
+async def _run_until_signal(config: VpnConfig, args: argparse.Namespace) -> None:
+    """Translate console signals into the same explicit disconnect as the GUI."""
+    loop = asyncio.get_running_loop()
+    stop_event = asyncio.Event()
+    previous: dict[int, object] = {}
+
+    def request_stop(_signum=None, _frame=None) -> None:
+        loop.call_soon_threadsafe(stop_event.set)
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            previous[sig] = signal.signal(sig, request_stop)
+        except (ValueError, OSError):
+            pass
+    try:
+        await run(config, args, stop_event=stop_event)
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
 
 
 if __name__ == "__main__":

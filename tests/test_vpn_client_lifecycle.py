@@ -3,7 +3,7 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from vpn.client import _run_session
+from vpn.client import _run_session, _run_until_signal
 from vpn.config import VpnConfig
 
 
@@ -32,3 +32,17 @@ class LifecycleSafetyTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     await _run_session(config, args, stop_event=stop)
             tun.stop.assert_awaited_once_with(preserve_kill_switch=startup_error)
+
+    async def test_console_signal_path_supplies_explicit_stop_event(self):
+        config = VpnConfig("wss://relay.example/tunnel", "test-only-token")
+        args = argparse.Namespace(tun=False)
+
+        async def fake_run(_config, _args, *, stop_event):
+            self.assertIsInstance(stop_event, asyncio.Event)
+            stop_event.set()
+
+        with patch("vpn.client.run", side_effect=fake_run), patch(
+            "vpn.client.signal.signal", return_value=lambda *_: None
+        ) as install:
+            await _run_until_signal(config, args)
+        self.assertGreaterEqual(install.call_count, 2)
