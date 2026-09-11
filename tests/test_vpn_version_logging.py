@@ -2,6 +2,8 @@ import logging
 import os
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest import mock
 
@@ -12,10 +14,11 @@ from vpn.version import __version__
 
 class VersionAndLoggingTests(unittest.TestCase):
     def test_cli_and_package_use_alpha_version(self):
-        with self.assertRaises(SystemExit) as stopped, mock.patch("builtins.print") as output:
+        output = StringIO()
+        with self.assertRaises(SystemExit) as stopped, redirect_stdout(output):
             build_parser().parse_args(["--version"])
         self.assertEqual(stopped.exception.code, 0)
-        self.assertIn(__version__, output.call_args.args[0])
+        self.assertIn(__version__, output.getvalue())
         pyproject = (Path(__file__).parents[1] / "pyproject.toml").read_text()
         self.assertIn('version = "0.1.0a1"', pyproject)
 
