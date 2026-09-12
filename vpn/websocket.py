@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import logging
+import secrets
 import socket
 import ssl
 from typing import Mapping, Sequence
@@ -132,7 +133,7 @@ class WebSocketTunnel:
 
 
 async def probe_relay(config) -> None:
-    """Prove TLS, authentication, protocol negotiation, and relay readiness."""
+    """Prove TLS, authentication, negotiation, and bidirectional framing."""
     tunnel = await WebSocketTunnel.connect(
         config.relay_host,
         config.relay_port,
@@ -141,4 +142,11 @@ async def probe_relay(config) -> None:
         timeout=config.connect_timeout,
         resolved_ips=config.relay_ips,
     )
-    await tunnel.close()
+    try:
+        challenge = secrets.token_bytes(32)
+        await asyncio.wait_for(tunnel.send(challenge), config.connect_timeout)
+        response = await asyncio.wait_for(tunnel.recv(), config.connect_timeout)
+        if response != challenge:
+            raise WebSocketError("Relay health challenge failed")
+    finally:
+        await tunnel.close()

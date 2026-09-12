@@ -148,8 +148,18 @@ class RelayTests(unittest.IsolatedAsyncioTestCase):
     async def test_authenticated_probe_acknowledges_protocol_readiness(self):
         async with self.dial("/probe") as ws:
             self.assertEqual(await ws.recv(), READY)
+            await ws.send(DATA + b"p" * 32)
+            self.assertEqual(await ws.recv(), DATA + b"p" * 32)
             with self.assertRaises(ConnectionClosed):
                 await ws.recv()
+
+    async def test_probe_rejects_wrong_challenge_size(self):
+        async with self.dial("/probe") as ws:
+            self.assertEqual(await ws.recv(), READY)
+            await ws.send(DATA + b"short")
+            with self.assertRaises(ConnectionClosed) as caught:
+                await ws.recv()
+            self.assertEqual(caught.exception.rcvd.code, 1008)
 
     async def test_duplicate_auth_rejected(self):
         with self.assertRaises(InvalidStatus) as caught:

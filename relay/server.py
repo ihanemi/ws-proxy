@@ -183,13 +183,21 @@ class Relay:
             elif ws.request.path == "/udp":
                 await self.udp(ws)
             else:
-                await ws.send(READY)
-                await ws.close()
+                await self.probe(ws)
         except (ValueError, TimeoutError, OSError, ConnectionClosed) as exc:
             # Never log a request, headers, or exception text provided by a peer.
             log.info("session_closed reason=%s", type(exc).__name__)
             await ws.close(code=1008 if isinstance(exc, ValueError) else 1011,
                            reason="tunnel failed")
+
+    async def probe(self, ws):
+        await ws.send(READY)
+        message = await asyncio.wait_for(ws.recv(), self.limits.connect_timeout)
+        payload = decode_tcp(message)
+        if payload is None or len(payload) != 32:
+            raise ValueError("Invalid health challenge")
+        await ws.send(DATA + payload)
+        await ws.close()
 
     async def tcp(self, ws):
         headers = ws.request.headers
