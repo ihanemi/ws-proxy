@@ -78,7 +78,7 @@ jobs:
           $wintunDir = Join-Path $env:RUNNER_TEMP "wintun"
           Expand-Archive -Path $wintunZip -DestinationPath $wintunDir -Force
           New-Item -ItemType Directory -Force third_party/licenses | Out-Null
-          $wintunLicense = Get-ChildItem $wintunDir -File -Filter "LICENSE*" | Select-Object -First 1
+          $wintunLicense = Get-ChildItem $wintunDir -Recurse -File -Filter "LICENSE*" | Select-Object -First 1
           if (-not $wintunLicense) { throw "Wintun license not found in official archive" }
           Copy-Item $wintunLicense.FullName third_party/licenses/Wintun-LICENSE.txt -Force
           $wintunDll = Get-ChildItem $wintunDir -Recurse -File -Filter "wintun.dll" |
