@@ -2,6 +2,9 @@
 
 Experimental system-wide Windows VPN tunnel over authenticated WebSockets.
 
+Current version: `0.1.0-alpha.1`. No public release is approved yet. The
+client executable and installer produced by CI are unsigned test artifacts.
+
 ## Architecture
 
 ```text
@@ -14,7 +17,7 @@ Windows apps (IPv4 + IPv6)
   -> destination TCP or UDP server (IPv4 or IPv6)
 ```
 
-The VPN client and relay authenticate with a shared bearer token. The relay refuses loopback/private/reserved destinations and port 25.
+The VPN client and relay use the versioned `WSVPN/1` subprotocol and authenticate with a shared bearer token before the WebSocket upgrade. The relay refuses loopback/private/reserved destinations and port 25.
 
 TCP uses one WebSocket stream per SOCKS5 CONNECT request. UDP uses SOCKS5 UDP ASSOCIATE and one WebSocket association carrying framed datagrams with their destination address and port. UDP responses carry the original source address back to the client.
 
@@ -39,7 +42,7 @@ TCP uses one WebSocket stream per SOCKS5 CONNECT request. UDP uses SOCKS5 UDP AS
 - Protocol/unit CI: implemented
 - Self-contained Windows AMD64 GUI build: implemented
 - Inno Setup Windows installer: implemented
-- Windows end-to-end/crash-recovery probe: implemented
+- Windows end-to-end/crash-recovery probe: implemented, pending execution on a dedicated Windows test machine
 - Cloudflare Worker relay: experimental TCP fallback only; Cloudflare restrictions prevent it from being a complete Internet tunnel
 
 The relay transport itself is deliberately IPv4-pinned on the client. This keeps the control/data WebSocket connection outside the `::/0` TUN route while IPv6 application traffic is carried inside the VPN. Therefore the relay hostname needs an IPv4 A record for Windows system-wide mode.
@@ -50,7 +53,7 @@ Launching `WsVpn.exe` without command-line arguments opens the Windows GUI. Ente
 
 Closing the window hides it to the system tray instead of stopping the VPN. The tray menu exposes Show, Connect/Disconnect, and Quit. Quit performs a graceful VPN disconnect before the application exits.
 
-GUI settings are stored under `%APPDATA%\WsVpn\config.json`. When **Remember token securely** is enabled, the token is encrypted with Windows DPAPI for the current Windows user before it is written to disk; the plaintext token is not stored in the JSON configuration. Runtime logs are written to `%APPDATA%\WsVpn\ws-vpn.log`.
+GUI settings are stored under `%APPDATA%\WsVpn\config.json`. When **Remember token securely** is enabled, the token is encrypted with Windows DPAPI for the current Windows user before it is written to disk; the plaintext token is not stored in the JSON configuration. Rotating runtime logs are written to `%LOCALAPPDATA%\WsVpn\logs\ws-vpn.log` (5 MiB per file, three backups).
 
 ## Kill switch and crash recovery
 
@@ -58,7 +61,7 @@ System-wide Windows mode enables a firewall kill switch by default. It creates p
 
 The rules are persistent on purpose. If `WsVpn.exe`, Python, or `tun2socks` dies unexpectedly, public traffic on the physical interface remains blocked instead of silently falling back outside the VPN. A normal graceful shutdown removes the rules.
 
-Session recovery metadata is stored in `%ProgramData%\WsVpn\state.json`. It records the TUN name, primary interface/gateway, relay host-route IPs, and the tun2socks PID/path so recovery only targets state created by WS VPN.
+Session recovery metadata is stored in `%ProgramData%\WsVpn\state.json` under an Administrators/SYSTEM-only ACL. It journals a random session ID, exact route and firewall identities, adapter GUID/index, and the tun2socks PID/path/process creation time. Recovery validates all of that data and never sweeps resources by a wildcard.
 
 The GUI has a **Recover** button. The CLI equivalent is:
 
@@ -81,7 +84,7 @@ The `VPN Windows Build` GitHub Actions workflow builds the `WsVpn-windows-amd64`
 - `THIRD_PARTY_NOTICES.md`
 - `scripts/windows_e2e.ps1`
 
-`WsVpn.exe` is a windowed, administrator-elevated AMD64 build. It bundles the verified tun2socks runtime and signed Wintun DLL, so neither component needs to be installed separately. `WsVpn-Setup-x64.exe` installs the client under Program Files and creates a Start Menu shortcut; an optional desktop shortcut can be selected during setup. Uninstall runs WS VPN recovery first so stale routes/firewall state are removed.
+`WsVpn.exe` is a windowed, administrator-elevated AMD64 build. It bundles the checksum-verified tun2socks runtime and the upstream-signed Wintun DLL, so neither component needs to be installed separately. These properties do not sign the WS VPN outputs themselves. `WsVpn-Setup-x64.exe` installs the client under Program Files and creates a Start Menu shortcut; an optional desktop shortcut can be selected during setup. Uninstall runs ownership-aware WS VPN recovery and aborts if cleanup fails, preserving the recovery tool and journal for inspection.
 
 The build currently pins:
 
@@ -118,7 +121,7 @@ export WS_VPN_TOKEN='replace-with-a-long-random-token'
 ws-vpn-relay --host 0.0.0.0 --port 8765
 ```
 
-For production, put the relay behind a TLS reverse proxy such as Nginx/Caddy and expose both `/tunnel` and `/udp` as WebSocket paths, or pass `--cert` and `--key` to terminate TLS directly in the relay.
+For a bounded systemd, Docker, Caddy, or Nginx deployment, follow [`deploy/README.md`](deploy/README.md). The relay exposes `/healthz`; tunnel traffic uses `/tunnel` and `/udp`. TLS can terminate at the relay with `--cert` and `--key`, or at a reviewed reverse proxy.
 
 ## Run the client as a SOCKS5 TCP/UDP tunnel
 
@@ -171,9 +174,16 @@ After deploying a real WSS relay and downloading the Windows artifact, run this 
   -ClientPath '.\WsVpn.exe'
 ```
 
-The probe validates the IPv4 and IPv6 TUN routes, persistent firewall rules, UDP DNS, and IPv4 HTTPS. It then deliberately force-kills the client, confirms that the kill switch survived the crash, and runs `--cleanup` in a `finally` block. Use `-TestIpv6Internet` to additionally require a successful IPv6 HTTPS request through a relay host that has working IPv6 egress.
+The probe refuses to touch a pre-existing recovery journal or unjournaled WS VPN firewall rules. It validates exact journaled routes/rules, multiple UDP and TCP DNS targets, concurrent IPv4 HTTPS streams, and a forced physical-interface route that must remain blocked. It then kills tun2socks, requires the client to fail while the guard persists, runs `--cleanup`, and verifies every journaled route/rule is gone. Use `-TestIpv6Internet` to additionally require a successful IPv6 HTTPS request through a relay host that has working IPv6 egress.
 
 This E2E script intentionally modifies routes and Windows Firewall state while it runs. Use it only from an elevated shell on a test machine or when temporary connectivity interruption is acceptable.
+
+## Known system-wide limitations
+
+- The firewall inventory is captured at connection start. A network adapter attached later is not protected until a new session; do not treat the current guard as a zero-window hot-plug design.
+- Wi-Fi/Ethernet switching, sleep/resume, reboot recovery, installer upgrade/uninstall, Defender behavior, and sustained throughput still require physical Windows validation.
+- The GUI currently reports readiness after the local SOCKS listener, tun2socks, routes, and guard are established. It does not yet prove end-to-end relay traffic or perform controlled reconnects.
+- The Cloudflare Worker remains TCP-only and is not protocol-compatible with full VPN mode.
 
 ## UDP security behavior
 

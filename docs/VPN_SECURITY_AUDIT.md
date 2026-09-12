@@ -87,5 +87,16 @@ the table above intentionally records the original baseline.
 
 ## Remediation record
 
-In progress. Tests and remaining physical validation are recorded separately
-from implementation claims.
+| Area | Current evidence | Remaining gate |
+| --- | --- | --- |
+| Transport | `WSVPN/1`, pre-upgrade auth, bounded frames/queues/tasks, TCP half-close and TLS integration tests | Sustained throughput and lossy-network measurements |
+| Relay | Public-address validation, connection/peer/time limits, bounded UDP state, `/healthz`, systemd/container/reverse-proxy examples | Deploy to a real host and run operational/load checks |
+| Windows ownership | Versioned private journal, exact route/rule identity, adapter GUID/index, PID/path/birth-time validation, machine-wide mutex | Physical reboot, upgrade/uninstall and adversarial recovery tests |
+| Leak prevention | All startup adapters guarded; physical DNS/DoT blocked; E2E contains a forced physical-route bypass probe | Hot-plug adapter design plus Wi-Fi/Ethernet, sleep/resume and native IPv6 measurements |
+| Packaging | Versioned PyInstaller/Inno outputs, pinned dependency hashes and fail-fast CI | Authenticode-sign the WS VPN EXE/installer and test Defender reputation |
+| Product lifecycle | Explicit disconnect path, crash-preserved guard, rotating logs | Traffic-based readiness, bounded reconnect state machine and physical Windows E2E |
+
+Automated Linux transport tests and Windows native/build tests are CI evidence,
+not a substitute for the physical tests above. No alpha tag or release should be
+created until the dedicated Windows E2E run is recorded and its cleanup is
+manually inspected.
