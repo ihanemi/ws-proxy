@@ -86,6 +86,7 @@ The `VPN Windows Build` GitHub Actions workflow builds the `WsVpn-windows-amd64`
 - `WsVpn-Setup-x64.exe`
 - `WsVpn-Setup-x64.exe.sha256`
 - `THIRD_PARTY_NOTICES.md`
+- `third_party/licenses/` with the bundled runtime license texts
 - `scripts/windows_e2e.ps1`
 
 `WsVpn.exe` is a windowed, administrator-elevated AMD64 build. It bundles the checksum-verified tun2socks runtime and the upstream-signed Wintun DLL, so neither component needs to be installed separately. These properties do not sign the WS VPN outputs themselves. `WsVpn-Setup-x64.exe` installs the client under Program Files and creates a Start Menu shortcut; an optional desktop shortcut can be selected during setup. Uninstall runs ownership-aware WS VPN recovery and aborts if cleanup fails, preserving the recovery tool and journal for inspection.

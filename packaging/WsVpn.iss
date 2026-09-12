@@ -35,6 +35,8 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 [Files]
 Source: "..\dist\WsVpn.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\third_party\licenses\tun2socks-LICENSE.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
+Source: "..\third_party\licenses\Wintun-LICENSE.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\WS VPN"; Filename: "{app}\{#MyAppExeName}"
