@@ -3,7 +3,7 @@
 Use a dedicated public Linux host. The recommended layout is Caddy or Nginx
 terminating TLS on port 443 and `ws-vpn-relay` bound to `127.0.0.1:8765`.
 The relay refuses a non-loopback plaintext bind; direct public binding requires
-`--cert` and `--key`. Both `/tunnel` and `/udp` must preserve WebSocket Upgrade,
+`--cert` and `--key`. `/tunnel`, `/udp`, and `/probe` must preserve WebSocket Upgrade,
 `Authorization`, and the two TCP destination headers.
 
 ## systemd and Caddy

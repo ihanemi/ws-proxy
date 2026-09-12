@@ -129,3 +129,16 @@ class WebSocketTunnel:
         self.closed = True
         # Always close the underlying transport, including after a received close.
         await self.connection.close()
+
+
+async def probe_relay(config) -> None:
+    """Prove TLS, authentication, protocol negotiation, and relay readiness."""
+    tunnel = await WebSocketTunnel.connect(
+        config.relay_host,
+        config.relay_port,
+        config.relay_probe_path,
+        headers={"Authorization": "Bearer " + config.token},
+        timeout=config.connect_timeout,
+        resolved_ips=config.relay_ips,
+    )
+    await tunnel.close()

@@ -8,8 +8,9 @@ TLS certificate/hostname verification is mandatory. HTTP Upgrade requests use
 checks authentication, path and version before upgrading; wrong credentials
 return 401, an unsupported version returns 426, invalid destinations return
 400. `/tunnel` takes exactly one `X-Tunnel-Host` and `X-Tunnel-Port`; `/udp`
-uses destinations inside each datagram. Reverse proxies must strip any path
-prefix before forwarding. Do not put credentials in URLs or access logs.
+uses destinations inside each datagram. An authenticated `/probe` upgrade sends
+READY and closes without opening an egress socket. Reverse proxies must strip
+any path prefix before forwarding. Do not put credentials in URLs or access logs.
 
 After upgrading, the server sends binary `03` only when the outbound TCP
 connection is open, or UDP sockets are available. The client must receive it

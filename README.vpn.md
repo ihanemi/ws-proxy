@@ -27,6 +27,7 @@ TCP uses one WebSocket stream per SOCKS5 CONNECT request. UDP uses SOCKS5 UDP AS
 - SOCKS5 UDP ASSOCIATE: implemented
 - UDP datagram framing over WSS: implemented
 - Authenticated WSS transport: implemented
+- Authenticated startup readiness probe: implemented
 - Windows Wintun/tun2socks orchestration: implemented
 - IPv4 and IPv6 default routing through the TUN: implemented
 - IPv4 DNS configuration on the TUN adapter: implemented
@@ -121,7 +122,7 @@ export WS_VPN_TOKEN='replace-with-a-long-random-token'
 ws-vpn-relay --host 0.0.0.0 --port 8765
 ```
 
-For a bounded systemd, Docker, Caddy, or Nginx deployment, follow [`deploy/README.md`](deploy/README.md). The relay exposes `/healthz`; tunnel traffic uses `/tunnel` and `/udp`. TLS can terminate at the relay with `--cert` and `--key`, or at a reviewed reverse proxy.
+For a bounded systemd, Docker, Caddy, or Nginx deployment, follow [`deploy/README.md`](deploy/README.md). The relay exposes `/healthz`; WebSocket traffic uses `/tunnel`, `/udp`, and the authenticated `/probe`. TLS can terminate at the relay with `--cert` and `--key`, or at a reviewed reverse proxy.
 
 ## Run the client as a SOCKS5 TCP/UDP tunnel
 
@@ -182,7 +183,7 @@ This E2E script intentionally modifies routes and Windows Firewall state while i
 
 - The firewall inventory is captured at connection start. A network adapter attached later is not protected until a new session; do not treat the current guard as a zero-window hot-plug design.
 - Wi-Fi/Ethernet switching, sleep/resume, reboot recovery, installer upgrade/uninstall, Defender behavior, and sustained throughput still require physical Windows validation.
-- The GUI currently reports readiness after the local SOCKS listener, tun2socks, routes, and guard are established. It does not yet prove end-to-end relay traffic or perform controlled reconnects.
+- The GUI reports readiness only after the local stack is established and an authenticated TLS/WebSocket probe receives `WSVPN/1` READY. The probe does not prove relay egress, and controlled reconnects are not implemented yet.
 - The Cloudflare Worker remains TCP-only and is not protocol-compatible with full VPN mode.
 
 ## UDP security behavior

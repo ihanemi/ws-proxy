@@ -100,6 +100,8 @@ async def _run_session(config, args, *, stop_event=None, on_ready=None):
         if tun:
             await tun.start()
             tasks.append(asyncio.create_task(tun.wait(), name="tun2socks-process"))
+        from .websocket import probe_relay
+        await probe_relay(config)
         if on_ready:
             on_ready()
         stop_task = None

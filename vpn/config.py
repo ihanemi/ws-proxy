@@ -72,6 +72,10 @@ class VpnConfig:
         return path
 
     @property
+    def relay_probe_path(self) -> str:
+        return self.relay_path[:-len("/tunnel")] + "/probe"
+
+    @property
     def relay_port(self) -> int:
         parsed = self._parsed_relay()
         return 443 if parsed.port is None else parsed.port

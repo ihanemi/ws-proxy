@@ -94,7 +94,7 @@ the table above intentionally records the original baseline.
 | Windows ownership | Versioned private journal, exact route/rule identity, adapter GUID/index, PID/path/birth-time validation, machine-wide mutex | Physical reboot, upgrade/uninstall and adversarial recovery tests |
 | Leak prevention | All startup adapters guarded; physical DNS/DoT blocked; E2E contains a forced physical-route bypass probe | Hot-plug adapter design plus Wi-Fi/Ethernet, sleep/resume and native IPv6 measurements |
 | Packaging | Versioned PyInstaller/Inno outputs, pinned dependency hashes and fail-fast CI | Authenticode-sign the WS VPN EXE/installer and test Defender reputation |
-| Product lifecycle | Explicit disconnect path, crash-preserved guard, rotating logs | Traffic-based readiness, bounded reconnect state machine and physical Windows E2E |
+| Product lifecycle | Explicit disconnect path, crash-preserved guard, rotating logs, authenticated TLS/WebSocket startup probe | Egress-based health, bounded reconnect state machine and physical Windows E2E |
 
 Automated Linux transport tests and Windows native/build tests are CI evidence,
 not a substitute for the physical tests above. No alpha tag or release should be

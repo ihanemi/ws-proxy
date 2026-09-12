@@ -145,6 +145,12 @@ class RelayTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(b"200 OK", response)
         self.assertIn(b"ok", response)
 
+    async def test_authenticated_probe_acknowledges_protocol_readiness(self):
+        async with self.dial("/probe") as ws:
+            self.assertEqual(await ws.recv(), READY)
+            with self.assertRaises(ConnectionClosed):
+                await ws.recv()
+
     async def test_duplicate_auth_rejected(self):
         with self.assertRaises(InvalidStatus) as caught:
             await self.dial(headers=[("Authorization", "Bearer " + TOKEN)] * 2)

@@ -46,6 +46,7 @@ class VpnConfigTests(unittest.TestCase):
     def test_udp_path_is_sibling_of_tunnel(self):
         cfg = VpnConfig("wss://vpn.example.com/tunnel", "secret")
         self.assertEqual(cfg.relay_udp_path, "/udp")
+        self.assertEqual(cfg.relay_probe_path, "/probe")
 
     def test_relay_query_is_rejected(self):
         with self.assertRaises(ValueError):

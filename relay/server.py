@@ -155,7 +155,7 @@ class Relay:
         expected = f"Bearer {self.token}".encode("ascii")
         if len(auth) != 1 or not hmac.compare_digest(auth[0].encode("utf-8"), expected):
             return connection.respond(HTTPStatus.UNAUTHORIZED, "Unauthorized\n")
-        if request.path not in ("/tunnel", "/udp"):
+        if request.path not in ("/tunnel", "/udp", "/probe"):
             return connection.respond(HTTPStatus.NOT_FOUND, "Unknown tunnel path\n")
         protocols = ",".join(request.headers.get_all("Sec-WebSocket-Protocol")).split(",")
         if SUBPROTOCOL not in [s.strip() for s in protocols]:
@@ -180,8 +180,11 @@ class Relay:
         try:
             if ws.request.path == "/tunnel":
                 await self.tcp(ws)
-            else:
+            elif ws.request.path == "/udp":
                 await self.udp(ws)
+            else:
+                await ws.send(READY)
+                await ws.close()
         except (ValueError, TimeoutError, OSError, ConnectionClosed) as exc:
             # Never log a request, headers, or exception text provided by a peer.
             log.info("session_closed reason=%s", type(exc).__name__)
