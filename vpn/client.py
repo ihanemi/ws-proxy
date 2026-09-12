@@ -97,11 +97,15 @@ async def _run_session(config, args, *, stop_event=None, on_ready=None):
         if socks_task in done:
             await socks_task
             raise RuntimeError("SOCKS listener stopped during startup")
+        from .websocket import probe_relay
+        # Reject bad TLS/auth/protocol settings before changing machine routes.
+        await probe_relay(config)
         if tun:
             await tun.start()
             tasks.append(asyncio.create_task(tun.wait(), name="tun2socks-process"))
-        from .websocket import probe_relay
-        await probe_relay(config)
+            # Prove the journaled relay bypass still works after default routes
+            # and the firewall guard are active.
+            await probe_relay(config)
         if on_ready:
             on_ready()
         stop_task = None

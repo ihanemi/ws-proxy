@@ -53,10 +53,11 @@ class LifecycleSafetyTests(unittest.IsolatedAsyncioTestCase):
         ready_callback = Mock()
         with patch("vpn.windows_tun.WindowsTun", return_value=tun), patch(
             "vpn.client.serve", side_effect=socks
-        ), patch("vpn.websocket.probe_relay", side_effect=ConnectionError("relay rejected probe")):
+        ), patch("vpn.websocket.probe_relay", side_effect=[None, ConnectionError("relay bypass failed")]):
             with self.assertRaises(ConnectionError):
                 await _run_session(config, args, on_ready=ready_callback)
         ready_callback.assert_not_called()
+        tun.start.assert_awaited_once()
         tun.stop.assert_awaited_once_with(preserve_kill_switch=True)
 
     async def test_console_signal_path_supplies_explicit_stop_event(self):
