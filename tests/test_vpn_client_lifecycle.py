@@ -5,9 +5,23 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from vpn.client import _run_session, _run_until_signal
 from vpn.config import VpnConfig
+from vpn.windows_tun import WindowsTun
 
 
 class LifecycleSafetyTests(unittest.IsolatedAsyncioTestCase):
+    async def test_fail_closed_stop_terminates_child_but_retains_journal(self):
+        tun = WindowsTun.__new__(WindowsTun)
+        tun._state = object()
+        tun.process = Mock(returncode=None)
+        tun.process.returncode = None
+        tun.process.wait = AsyncMock(return_value=1)
+        with patch("vpn.windows_tun.cleanup_recorded_state") as cleanup:
+            await tun.stop(preserve_kill_switch=True)
+        tun.process.terminate.assert_called_once_with()
+        tun.process.wait.assert_awaited_once_with()
+        cleanup.assert_not_called()
+        self.assertIsNotNone(tun._state)
+
     async def test_startup_error_and_explicit_disconnect_have_different_cleanup(self):
         config = VpnConfig("wss://relay.example/tunnel", "test-only-token")
         args = argparse.Namespace(tun=True, tun2socks="runtime.exe", tun_name="wsvpn", dns="1.1.1.1",

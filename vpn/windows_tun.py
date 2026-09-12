@@ -191,7 +191,15 @@ class WindowsTun:
 
     async def stop(self, *, preserve_kill_switch=False):
         # The owning caller holds the machine-wide lock until cleanup finishes.
-        if self._state is None or preserve_kill_switch:
+        if self._state is None:
+            return
+        if preserve_kill_switch:
+            # An unexpected core failure must not leave an unmonitored child
+            # accepting packets. Keep the exact recovery journal and firewall
+            # guard, but stop the process through the handle we created.
+            if self.process is not None and self.process.returncode is None:
+                self.process.terminate()
+                await asyncio.wait_for(self.process.wait(), 5)
             return
         cleanup_recorded_state(self._state)
         if self.process is not None:
