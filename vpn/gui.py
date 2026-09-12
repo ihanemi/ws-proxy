@@ -12,6 +12,7 @@ from tkinter import messagebox, ttk
 
 from .client import _bundled_tun2socks, run
 from .config import VpnConfig
+from .lifecycle import ConnectionState
 from .logging_setup import configure_file_logging
 from .settings import AppSettings, load_settings, save_settings
 from .version import __version__
@@ -217,7 +218,7 @@ class VpnGui:
                     config,
                     args,
                     stop_event=stop_event,
-                    on_ready=lambda: self.events.put(("ready", None)),
+                    on_state=lambda state: self.events.put(("state", state)),
                 )
             )
             self.events.put(("stopped", None))
@@ -263,12 +264,8 @@ class VpnGui:
         try:
             while True:
                 event, payload = self.events.get_nowait()
-                if event == "ready":
-                    self.connecting = False
-                    self.running = True
-                    self.status_var.set("Connected")
-                    self.connect_button.configure(state="disabled")
-                    self.disconnect_button.configure(state="normal")
+                if event == "state":
+                    self._apply_state(payload)
                 elif event == "stopped":
                     self._set_disconnected("Disconnected")
                 elif event == "error":
@@ -293,6 +290,32 @@ class VpnGui:
             self._destroy()
             return
         self.root.after(100, self._poll_events)
+
+    def _apply_state(self, state: ConnectionState) -> None:
+        self.connecting = state in (ConnectionState.CONNECTING, ConnectionState.RECONNECTING)
+        self.running = state in (
+            ConnectionState.CONNECTED,
+            ConnectionState.RECONNECTING,
+            ConnectionState.DISCONNECTING,
+        )
+        labels = {
+            ConnectionState.RECONNECTING: "Reconnecting — kill switch active",
+            ConnectionState.DISCONNECTING: "Disconnecting…",
+            ConnectionState.FAILED: "Failed — recovery may be required",
+        }
+        self.status_var.set(labels.get(state, state.value))
+        active = self.running or self.connecting
+        self.connect_button.configure(state="disabled" if active else "normal")
+        self.disconnect_button.configure(
+            state="normal" if state in (
+                ConnectionState.CONNECTING,
+                ConnectionState.CONNECTED,
+                ConnectionState.RECONNECTING,
+            ) else "disabled"
+        )
+        self.recover_button.configure(state="disabled" if active else "normal")
+        if self.tray_icon is not None:
+            self.tray_icon.title = f"WS VPN — {self.status_var.get()}"
 
     def _set_disconnected(self, status: str) -> None:
         self.connecting = False

@@ -28,6 +28,7 @@ TCP uses one WebSocket stream per SOCKS5 CONNECT request. UDP uses SOCKS5 UDP AS
 - UDP datagram framing over WSS: implemented
 - Authenticated WSS transport: implemented
 - Authenticated startup readiness probe: implemented
+- Connection state machine and bounded health reconnect: implemented
 - Windows Wintun/tun2socks orchestration: implemented
 - IPv4 and IPv6 default routing through the TUN: implemented
 - IPv4 DNS configuration on the TUN adapter: implemented
@@ -183,7 +184,7 @@ This E2E script intentionally modifies routes and Windows Firewall state while i
 
 - The firewall inventory is captured at connection start. A network adapter attached later is not protected until a new session; do not treat the current guard as a zero-window hot-plug design.
 - Wi-Fi/Ethernet switching, sleep/resume, reboot recovery, installer upgrade/uninstall, Defender behavior, and sustained throughput still require physical Windows validation.
-- The GUI reports readiness only after the local stack is established and an authenticated TLS/WebSocket probe receives `WSVPN/1` READY. The probe does not prove relay egress, and controlled reconnects are not implemented yet.
+- The GUI reports readiness only after the local stack is established and an authenticated TLS/WebSocket probe receives `WSVPN/1` READY. Periodic failures enter `Reconnecting` with jittered 1/2/4/8/15/30-second backoff while the kill switch remains active. The probe still does not prove relay Internet egress.
 - The Cloudflare Worker remains TCP-only and is not protocol-compatible with full VPN mode.
 
 ## UDP security behavior

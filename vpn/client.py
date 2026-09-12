@@ -11,6 +11,7 @@ from typing import Callable
 
 from .config import VpnConfig
 from .async_utils import cancel_and_join
+from .lifecycle import ConnectionState, ConnectionStateMachine, monitor_relay
 from .socks5 import serve
 from .version import __version__
 
@@ -65,21 +66,25 @@ async def run(
     *,
     stop_event: asyncio.Event | None = None,
     on_ready: Callable[[], None] | None = None,
+    on_state: Callable[[ConnectionState], None] | None = None,
 ) -> None:
     if args.tun:
         if os.name != "nt":
             raise RuntimeError("--tun currently supports Windows only")
         from .windows_native import session_lock
         with session_lock():
-            await _run_session(config, args, stop_event=stop_event, on_ready=on_ready)
+            await _run_session(config, args, stop_event=stop_event, on_ready=on_ready, on_state=on_state)
     else:
-        await _run_session(config, args, stop_event=stop_event, on_ready=on_ready)
+        await _run_session(config, args, stop_event=stop_event, on_ready=on_ready, on_state=on_state)
 
 
-async def _run_session(config, args, *, stop_event=None, on_ready=None):
+async def _run_session(config, args, *, stop_event=None, on_ready=None, on_state=None):
     tun = None
     tasks = []
     clean_shutdown = False
+    shutdown = stop_event or asyncio.Event()
+    machine = ConnectionStateMachine(on_state)
+    machine.transition(ConnectionState.CONNECTING)
     try:
         if args.tun:
             from .windows_tun import WindowsTun
@@ -108,6 +113,11 @@ async def _run_session(config, args, *, stop_event=None, on_ready=None):
             await probe_relay(config)
         if on_ready:
             on_ready()
+        machine.transition(ConnectionState.CONNECTED)
+        health_task = asyncio.create_task(
+            monitor_relay(config, shutdown, machine), name="relay-health-monitor"
+        )
+        tasks.append(health_task)
         stop_task = None
         if stop_event is not None:
             stop_task = asyncio.create_task(stop_event.wait(), name="vpn-stop-request")
@@ -116,16 +126,26 @@ async def _run_session(config, args, *, stop_event=None, on_ready=None):
         done, _ = await asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED)
         if stop_task is not None and stop_task in done:
             clean_shutdown = True
+            machine.transition(ConnectionState.DISCONNECTING)
             return
         for task in done:
             task.result()
         raise RuntimeError("VPN core stopped unexpectedly; kill switch retained. Run --cleanup after inspection.")
+    except BaseException:
+        machine.fail()
+        raise
     finally:
         await cancel_and_join(*tasks)
-        if tun:
-            # All unexpected errors (including startup and SOCKS failure) retain
-            # the guard. Only an explicit disconnect releases its ownership.
-            await tun.stop(preserve_kill_switch=not clean_shutdown and not args.no_kill_switch)
+        try:
+            if tun:
+                # All unexpected errors (including startup and SOCKS failure) retain
+                # the guard. Only an explicit disconnect releases its ownership.
+                await tun.stop(preserve_kill_switch=not clean_shutdown and not args.no_kill_switch)
+        except BaseException:
+            machine.fail()
+            raise
+        if clean_shutdown:
+            machine.transition(ConnectionState.DISCONNECTED)
 
 
 def _cleanup_windows_state() -> None:

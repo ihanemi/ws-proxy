@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from vpn.client import _run_session, _run_until_signal
 from vpn.config import VpnConfig
+from vpn.lifecycle import ConnectionState
 from vpn.windows_tun import WindowsTun
 
 
@@ -32,6 +33,7 @@ class LifecycleSafetyTests(unittest.IsolatedAsyncioTestCase):
             ready.set()
             await blocked()
         for startup_error in (False, True):
+            states = []
             tun = AsyncMock()
             tun.prepare.return_value = config
             tun.wait.side_effect = blocked
@@ -44,10 +46,21 @@ class LifecycleSafetyTests(unittest.IsolatedAsyncioTestCase):
             ), patch("vpn.websocket.probe_relay", new=AsyncMock()):
                 if startup_error:
                     with self.assertRaises(RuntimeError):
-                        await _run_session(config, args, stop_event=stop)
+                        await _run_session(config, args, stop_event=stop, on_state=states.append)
                 else:
-                    await _run_session(config, args, stop_event=stop)
+                    await _run_session(config, args, stop_event=stop, on_state=states.append)
             tun.stop.assert_awaited_once_with(preserve_kill_switch=startup_error)
+            expected = (
+                [ConnectionState.CONNECTING, ConnectionState.FAILED]
+                if startup_error else
+                [
+                    ConnectionState.CONNECTING,
+                    ConnectionState.CONNECTED,
+                    ConnectionState.DISCONNECTING,
+                    ConnectionState.DISCONNECTED,
+                ]
+            )
+            self.assertEqual(states, expected)
 
     async def test_failed_authenticated_probe_never_reports_ready(self):
         config = VpnConfig("wss://relay.example/tunnel", "test-only-token")

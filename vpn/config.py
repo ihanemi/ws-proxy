@@ -17,6 +17,7 @@ class VpnConfig:
     buffer_size: int = 256 * 1024
     relay_ips: tuple[str, ...] = ()
     max_clients: int = 256
+    health_interval: float = 20.0
 
     def __post_init__(self) -> None:
         validate_token(self.token)
@@ -40,6 +41,8 @@ class VpnConfig:
             raise ValueError("Buffer size exceeds the protocol limit")
         if not 1 <= self.max_clients <= 1024:
             raise ValueError("SOCKS client limit must be between 1 and 1024")
+        if not 5 <= self.health_interval <= 300:
+            raise ValueError("Health interval must be between 5 and 300 seconds")
         for value in self.relay_ips:
             ipaddress.IPv4Address(value)
 
