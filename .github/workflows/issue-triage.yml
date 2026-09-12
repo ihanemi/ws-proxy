@@ -1,4 +1,4 @@
-name: Auto comment on new issues
+name: WS VPN issue guidance
 
 on:
   issues:
@@ -12,31 +12,21 @@ jobs:
     if: contains(github.event.issue.labels.*.name, 'bug')
     runs-on: ubuntu-latest
     steps:
-      - name: Comment on new issue
+      - name: Add safe diagnostic guidance
         uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ### Проверьте две вещи:
-            - вы на последней версии: [Releases](https://github.com/Flowseal/tg-ws-proxy/releases)
-            - запускали по инструкции для своей ОС: [Быстрый старт](https://github.com/Flowseal/tg-ws-proxy#навигация)
+            Thanks for reporting a WS VPN problem.
 
-            ## Решение частых проблем:
+            Please include:
 
-            **Q**: Не запускается, падает с ошибкой, не работает как раньше после обновления?  
-            **A**:
-            1. Удалите всё в папке Temp (или хотя бы всё, что начинается с _MEI) 
-            2. Запускайте от имени админа
-            3. Попробуйте Win7 версию (если вы пользователь Windows)
-            4. Попробуйте отключить антивирус (если помогло, то добавьте exe в исключения). Не забудьте включить антивирус обратно.
+            - the WS VPN version and Windows version;
+            - whether the kill switch and IPv6 were enabled;
+            - the failure stage: connect, traffic, disconnect, or recovery;
+            - the relevant excerpt from **Open Logs**, after checking it for personal data;
+            - whether `%ProgramData%\WsVpn\state.json` still exists (do not paste its full contents).
 
-            ###
-
-            **Q**: Не грузит медиа? (фото/видео/стикеры)  
-            **A**: Удалите в настройках прокси в поле **DC → IP** всё, кроме `4:149.154.167.220`. Если это не помогло, полностью очистите это поле.
-
-
-            #### Если проблема решена, то закройте Issue
-
-            ### Если проблема осталась, пожалуйста, приложите по возможности логи.
-            Сделать это можно через иконку в трее -> Пкм -> Открыть логи. Сохраните логи в файл и приложите его сюда.
+            If the guard remains after a crash, keep the machine offline until you have run
+            `WsVpn.exe --cleanup` from an elevated terminal. Do not disable Windows Defender,
+            Firewall, or TLS verification as a workaround.
