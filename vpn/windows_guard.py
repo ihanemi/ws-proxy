@@ -119,7 +119,10 @@ def _secure_directory(path: Path, *, create: bool) -> None:
         paths = [directory] + ([path] if path.exists() else [])
         values = ",".join(f"'{_ps_quote(str(value))}'" for value in paths)
         _powershell(
-            f"foreach($path in @({values})) {{ $acl=Get-Acl -LiteralPath $path; "
+            f"foreach($path in @({values})) {{ "
+            "$acl=if([IO.Directory]::Exists($path)){[IO.Directory]::GetAccessControl($path)}"
+            "elseif([IO.File]::Exists($path)){[IO.File]::GetAccessControl($path)}"
+            "else{throw 'Recovery path disappeared during validation'}; "
             "$owner=$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value; "
             "if ($owner -notin @('S-1-5-18','S-1-5-32-544') -or -not $acl.AreAccessRulesProtected) "
             "{ throw 'Untrusted legacy state directory; inspect and migrate it before using this client' }; "
