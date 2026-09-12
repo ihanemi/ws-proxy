@@ -13,7 +13,7 @@ from tkinter import messagebox, ttk
 from .client import _bundled_tun2socks, run
 from .config import VpnConfig
 from .lifecycle import ConnectionState
-from .logging_setup import configure_file_logging
+from .logging_setup import configure_file_logging, log_directory
 from .settings import AppSettings, load_settings, save_settings
 from .version import __version__
 
@@ -31,6 +31,7 @@ class VpnGui:
         self.running = False
         self.connecting = False
         self.quitting = False
+        self.reconnect_requested = False
         self.tray_icon = None
 
         try:
@@ -60,8 +61,8 @@ class VpnGui:
 
     def _configure_window(self) -> None:
         self.root.title(f"WS VPN {__version__}")
-        self.root.geometry("470x430")
-        self.root.minsize(450, 410)
+        self.root.geometry("470x470")
+        self.root.minsize(450, 450)
         self.root.protocol("WM_DELETE_WINDOW", self.hide_window)
         try:
             ttk.Style().theme_use("vista")
@@ -133,12 +134,16 @@ class VpnGui:
         self.recover_button = ttk.Button(buttons, text="Recover", command=self.recover)
         self.recover_button.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
+        ttk.Button(frame, text="Open Logs", command=self.open_logs).grid(
+            row=8, column=0, columnspan=2, sticky="e", pady=(10, 0)
+        )
+
         ttk.Label(
             frame,
             text="Closing the window keeps WS VPN in the system tray. Quit disconnects the VPN first.",
             foreground="#666666",
             wraplength=420,
-        ).grid(row=8, column=0, columnspan=2, sticky="w", pady=(18, 0))
+        ).grid(row=9, column=0, columnspan=2, sticky="w", pady=(18, 0))
 
     def _toggle_token_visibility(self) -> None:
         self.token_entry.configure(show="" if self.show_token_var.get() else "•")
@@ -269,6 +274,7 @@ class VpnGui:
                 elif event == "stopped":
                     self._set_disconnected("Disconnected")
                 elif event == "error":
+                    self.reconnect_requested = False
                     self.connecting = False
                     self.running = False
                     self.connect_button.configure(state="normal")
@@ -318,12 +324,23 @@ class VpnGui:
             self.tray_icon.title = f"WS VPN — {self.status_var.get()}"
 
     def _set_disconnected(self, status: str) -> None:
+        reconnect = self.reconnect_requested and not self.quitting
+        self.reconnect_requested = False
         self.connecting = False
         self.running = False
         self.status_var.set(status)
         self.connect_button.configure(state="normal")
         self.disconnect_button.configure(state="disabled")
         self.recover_button.configure(state="normal")
+        if reconnect:
+            self.root.after(100, self.connect)
+
+    def reconnect(self) -> None:
+        if self.running or self.connecting:
+            self.reconnect_requested = True
+            self.disconnect()
+        else:
+            self.connect()
 
     def hide_window(self) -> None:
         self.root.withdraw()
@@ -332,6 +349,14 @@ class VpnGui:
         self.root.deiconify()
         self.root.lift()
         self.root.focus_force()
+
+    def open_logs(self) -> None:
+        try:
+            directory = log_directory()
+            directory.mkdir(parents=True, exist_ok=True)
+            os.startfile(directory)
+        except Exception as exc:
+            messagebox.showerror("WS VPN", f"Could not open logs: {exc}", parent=self.root)
 
     def _start_tray(self) -> None:
         try:
@@ -355,9 +380,17 @@ class VpnGui:
         def quit_app(_icon, _item) -> None:
             self.root.after(0, self.quit)
 
+        def open_logs(_icon, _item) -> None:
+            self.root.after(0, self.open_logs)
+
+        def reconnect(_icon, _item) -> None:
+            self.root.after(0, self.reconnect)
+
         menu = pystray.Menu(
             pystray.MenuItem("Show", show, default=True),
             pystray.MenuItem(lambda _item: "Disconnect" if (self.running or self.connecting) else "Connect", toggle),
+            pystray.MenuItem("Reconnect", reconnect),
+            pystray.MenuItem("Open Logs", open_logs),
             pystray.MenuItem("Quit", quit_app),
         )
         self.tray_icon = pystray.Icon("wsvpn", image, "WS VPN", menu)

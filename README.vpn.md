@@ -53,7 +53,9 @@ The relay transport itself is deliberately IPv4-pinned on the client. This keeps
 
 Launching `WsVpn.exe` without command-line arguments opens the Windows GUI. Enter the WSS relay URL and shared token, then press **Connect**. The GUI also exposes DNS, TUN name, IPv6, kill-switch, secure-token-memory, and start-minimized settings.
 
-Closing the window hides it to the system tray instead of stopping the VPN. The tray menu exposes Show, Connect/Disconnect, and Quit. Quit performs a graceful VPN disconnect before the application exits.
+Closing the window hides it to the system tray instead of stopping the VPN. The tray menu exposes Show, Connect/Disconnect, Reconnect, Open Logs, and Quit. A manual reconnect performs an ownership-aware graceful disconnect before starting a new session. Quit performs a graceful VPN disconnect before the application exits.
+
+The window and tray menu both provide **Open Logs**, which opens the rotating log directory without exposing credentials in the UI.
 
 GUI settings are stored under `%APPDATA%\WsVpn\config.json`. When **Remember token securely** is enabled, the token is encrypted with Windows DPAPI for the current Windows user before it is written to disk; the plaintext token is not stored in the JSON configuration. Rotating runtime logs are written to `%LOCALAPPDATA%\WsVpn\logs\ws-vpn.log` (5 MiB per file, three backups).
 
