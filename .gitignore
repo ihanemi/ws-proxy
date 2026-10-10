@@ -25,3 +25,9 @@ Desktop.ini
 .DS_Store
 
 /icon.icns
+
+# Worker runtime and local secrets
+worker/node_modules/
+worker/.wrangler/
+worker/.dev.vars
+worker/.env*
