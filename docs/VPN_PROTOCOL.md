@@ -77,9 +77,20 @@ marker (default 1.1.1.1); other UDP traffic is dropped, never sent directly.
 DNS queries have one uncompressed ASCII/IDNA IN question, are <=4096 bytes, and
 must be standard queries. Replies are <=4096 bytes and must echo transaction ID,
 question name/type/class and response opcode. DoH error, mismatch or timeout
-closes the association; reconnect requires a new secure association. TCP DNS,
-compressed questions and larger replies are unsupported, with no insecure
-fallback. Worker `/udp` is not exposed. Relay `/udp` is unchanged.
+closes the association; reconnect requires a new secure association. Compressed
+questions and larger replies are unsupported, with no insecure fallback.
+Worker `/udp` is not exposed. Relay `/udp` is unchanged.
+
+The Cloudflare client also accepts SOCKS CONNECT to its configured IPv4 DNS
+marker on port 53. It translates the standard two-byte big-endian DNS TCP
+length prefix to one `/dns` datagram per query, and restores the length prefix
+on the matching response. Pipelined queries are processed sequentially with a
+4096-byte limit per query/reply, a 120-second idle header deadline and the
+configured client timeout for query completion/DoH response/output drain.
+Partial or invalid lengths, response mismatch, close and timeout fail the TCP
+stream. No raw port-53 socket or client resolver is used, and no new Worker
+wire version is needed. Other TCP DNS markers are rejected. The self-hosted
+profile continues to forward TCP DNS normally over `/tunnel`.
 
 Worker application limits: 8 active sessions per isolate including pending
 connects, 10-second combined resolution/connect and individual DoH deadlines,

@@ -9,6 +9,7 @@ from typing import Tuple
 
 from .async_utils import cancel_and_join, close_writer, run_pair
 from .config import VpnConfig
+from .dns import forward_tcp_dns
 from .protocol import validate_host
 from .udp_protocol import MAX_DATAGRAM, UdpFrameError
 from .udp_protocol import decode_datagram, encode_datagram
@@ -287,7 +288,21 @@ async def _handle_connect(
     mark_ready,
 ) -> None:
     if config.backend == "cloudflare" and port == 53:
-        raise SocksProtocolError("Cloudflare DNS uses the secure DNS association; TCP DNS is unsupported")
+        if host != config.dns_server:
+            raise SocksProtocolError("Cloudflare TCP DNS requires the configured DNS marker")
+        ws = await WebSocketTunnel.connect(
+            host=config.relay_host, port=config.relay_port, path=config.relay_udp_path,
+            timeout=config.connect_timeout, resolved_ips=config.relay_ips,
+            headers={"Authorization": f"Bearer {config.token}"},
+        )
+        try:
+            _reply(writer, 0)
+            mark_ready()
+            await writer.drain()
+            await forward_tcp_dns(reader, writer, ws, config)
+        finally:
+            await ws.close()
+        return
     ws = await WebSocketTunnel.connect(
         host=config.relay_host,
         port=config.relay_port,

@@ -124,8 +124,9 @@ try {
     if ($Backend -eq "cloudflare") {
         Write-Host "[3/8] Testing the configured DNS marker through Worker DoH..."
         $udp = Resolve-DnsName example.com -Server $DnsMarker -DnsOnly -QuickTimeout -ErrorAction Stop
-        if (-not $udp) { throw "Worker DNS returned no records." }
-        Write-Host "Generic UDP and TCP DNS are unsupported in Cloudflare mode."
+        $tcp = Resolve-DnsName example.com -Server $DnsMarker -DnsOnly -TcpOnly -QuickTimeout -ErrorAction Stop
+        if (-not $udp -or -not $tcp) { throw "Worker UDP/TCP DNS returned no records." }
+        Write-Host "Generic UDP is unsupported in Cloudflare mode; UDP/TCP DNS both use authenticated DoH."
     }
     else {
         Write-Host "[3/8] Testing multiple UDP/TCP DNS destinations through the relay..."

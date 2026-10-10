@@ -110,6 +110,11 @@ limits queues/deadlines/sessions, and supports negotiated ACK download flow
 control. `/dns` uses a fixed HTTPS resolver with bounded responses and no redirect
 following. The Cloudflare SOCKS path filters all non-marker/non-DNS UDP and has
 no direct socket fallback; startup/reconnect also require a DNS probe.
+TCP DNS at the configured marker is translated to the same `/dns` contract,
+with bounded length-prefixed reads, response checks and deadlines. Other TCP
+DNS destinations fail before dialing. Regression tests include a real local
+SOCKS connection with fragmented/pipelined DNS queries and timeout/invalid
+response failures; the HTTPS resolver is still mocked in runtime tests.
 
 The original bypass-IP exception allowed UDP and unrelated TCP ports. Additional
 journaled rules now block UDP/ICMPv4 and non-relay TCP ports on those IPs across

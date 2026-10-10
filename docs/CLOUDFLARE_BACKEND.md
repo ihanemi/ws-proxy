@@ -3,7 +3,8 @@
 ## Delivered implementation
 
 Baseline: `feature/vpn-mode` at `b4150ed04bd012fdf110bc9330b5fb66614cf164`.
-Changes are on `feature/cloudflare-backend`, for a draft PR into `feature/vpn-mode`.
+Changes are developed on `feature/cloudflare-backend`; [PR #1](https://github.com/ihanemi/ws-proxy/pull/1)
+targets `feature/vpn-mode` for development integration after passing CI.
 No changes are merged into `main`, no stable release is published, and no
 infrastructure is deployed by this work.
 
@@ -11,7 +12,7 @@ infrastructure is deployed by this work.
 | --- | --- | --- |
 | 0 | Original Python implementation retained; baseline tests recorded | None |
 | 1 | Worker WSVPN/1 TCP, probe, half-close, validation and bounded flow control | Live Cloudflare outbound TCP and network performance |
-| 2 | Fixed-upstream Worker DoH, DNS-only SOCKS association, startup/health probes | Real Windows system DNS and packet-capture leak checks |
+| 2 | Fixed-upstream Worker DoH, UDP and TCP DNS translation, startup/health probes | Real Windows system DNS and packet-capture leak checks |
 | 3 | Explicit backend in CLI, GUI and persisted settings; mandatory guard in Cloudflare TUN | Physical Windows GUI/TUN execution |
 | 4 | Automated tests, Windows build workflow and profile-aware E2E script | Hardware, crash, adapter switching, sleep/resume and leak tests |
 | 5 | Self-hosted relay unchanged; regression/integration tests retained | Operational real-host load/IPv4/IPv6/UDP checks |
@@ -25,7 +26,7 @@ infrastructure is deployed by this work.
   negotiation adds bounded Worker downloads without changing base framing.
 - ADR-003: `selfhosted` is the default. `cloudflare` supports TCP and secure DNS,
   exposes limited connectivity and refuses generic UDP. There is no direct fallback.
-- ADR-004: System UDP DNS is encapsulated in authenticated WSS and translated to
+- ADR-004: System UDP and TCP DNS are encapsulated in authenticated WSS and translated to
   fixed-upstream HTTPS DNS by the Worker; no client-side plaintext DNS fallback.
 - ADR-005: Resolve hostnames through DoH, check every A/AAAA answer, reject mixed
   public/private answers and connect to a pinned numeric public address. Bound
@@ -122,11 +123,14 @@ that it remains tunneled.
 ## Actual limitations and security gates
 
 - Workers raw TCP cannot connect to Cloudflare IP ranges, private addresses or
-  port 25. The backend also blocks port 53 to avoid unsecured TCP DNS egress.
+  port 25. Raw `/tunnel` connections to port 53 are also blocked; DNS TCP to the
+  configured marker uses `/dns` and fixed-upstream DoH instead.
   Some Cloudflare-hosted HTTPS destinations therefore fail. HTTPS fetch cannot
   transparently replace a TLS byte stream; no misleading fallback is provided.
-- No generic UDP/QUIC/VoIP/gaming. DNS-only UDP association is not a general UDP
-  relay. TCP DNS, compressed DNS questions and >4096-byte DNS replies fail;
+- No generic UDP/QUIC/VoIP/gaming. DNS-only association is not a general UDP
+  relay. TCP DNS works only at the configured IPv4 marker (default 1.1.1.1),
+  using the same secure path as UDP DNS. Compressed DNS questions and
+  >4096-byte DNS queries/replies fail;
   there is no plaintext fallback. Legacy TCP clients lacking ACK are capped at
   8 MiB downstream; current Cloudflare-profile clients negotiate ACK.
 - New guard rules block UDP/ICMP and TCP ports other than the configured relay
