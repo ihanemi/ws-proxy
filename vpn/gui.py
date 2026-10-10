@@ -215,16 +215,16 @@ class VpnGui:
         self.core_loop = loop
         self.stop_event = stop_event
 
-        args = argparse.Namespace(
-            tun=True,
-            tun2socks=_bundled_tun2socks(),
-            tun_name=settings.tun_name,
-            dns=settings.dns,
-            udp_timeout="2m",
-            no_ipv6=not settings.ipv6,
-            no_kill_switch=not settings.kill_switch,
-        )
         try:
+            args = argparse.Namespace(
+                tun=True,
+                tun2socks=_bundled_tun2socks(),
+                tun_name=settings.tun_name,
+                dns=settings.dns,
+                udp_timeout="2m",
+                no_ipv6=not settings.ipv6,
+                no_kill_switch=not settings.kill_switch,
+            )
             loop.run_until_complete(
                 run(
                     config,
