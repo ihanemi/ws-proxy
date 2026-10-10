@@ -19,6 +19,7 @@ class SettingsTests(unittest.TestCase):
                 settings = AppSettings(
                     relay="wss://vpn.example.com/tunnel",
                     dns="9.9.9.9",
+                    backend="cloudflare",
                     tun_name="testtun",
                     ipv6=False,
                     kill_switch=True,
@@ -37,6 +38,7 @@ class SettingsTests(unittest.TestCase):
                 )
                 self.assertEqual(loaded.relay, settings.relay)
                 self.assertEqual(loaded.dns, "9.9.9.9")
+                self.assertEqual(loaded.backend, "cloudflare")
                 self.assertEqual(loaded.tun_name, "testtun")
                 self.assertFalse(loaded.ipv6)
                 self.assertTrue(loaded.kill_switch)

@@ -7,14 +7,14 @@ client executable and installer produced by CI are unsigned test artifacts.
 
 ## Architecture
 
-```text
-Windows apps (IPv4 + IPv6)
-  -> Wintun
-  -> tun2socks
-  -> local SOCKS5 TCP/UDP (127.0.0.1:1080)
-  -> WSS over a pinned IPv4 relay connection
-  -> ws-vpn-relay
-  -> destination TCP or UDP server (IPv4 or IPv6)
+```mermaid
+flowchart TD
+  Apps["Windows apps: IPv4 / IPv6"] --> Tun["Wintun and tun2socks"]
+  Tun --> Socks["Local SOCKS5: 127.0.0.1:1080"]
+  Socks -->|Authenticated WSS| Worker["Cloudflare Worker"]
+  Socks -->|Authenticated WSS| Relay["Self-hosted Python relay"]
+  Worker -->|TCP and secure DNS| Internet["Public destinations"]
+  Relay -->|TCP and UDP| Internet
 ```
 
 The VPN client and relay use the versioned `WSVPN/1` subprotocol and authenticate with a shared bearer token before the WebSocket upgrade. The relay refuses loopback/private/reserved destinations and port 25.
@@ -45,7 +45,7 @@ TCP uses one WebSocket stream per SOCKS5 CONNECT request. UDP uses SOCKS5 UDP AS
 - Self-contained Windows AMD64 GUI build: implemented
 - Inno Setup Windows installer: implemented
 - Windows end-to-end/crash-recovery probe: implemented, pending execution on a dedicated Windows test machine
-- Cloudflare Worker relay: experimental TCP fallback only; Cloudflare restrictions prevent it from being a complete Internet tunnel
+- Cloudflare Worker backend: WSVPN/1 TCP + authenticated DoH, no generic UDP; see [deployment and limits](docs/CLOUDFLARE_BACKEND.md)
 
 The relay transport itself is deliberately IPv4-pinned on the client. This keeps the control/data WebSocket connection outside the `::/0` TUN route while IPv6 application traffic is carried inside the VPN. Therefore the relay hostname needs an IPv4 A record for Windows system-wide mode.
 
@@ -188,7 +188,7 @@ This E2E script intentionally modifies routes and Windows Firewall state while i
 - The firewall inventory is captured at connection start. A network adapter attached later is not protected until a new session; do not treat the current guard as a zero-window hot-plug design.
 - Wi-Fi/Ethernet switching, sleep/resume, reboot recovery, installer upgrade/uninstall, Defender behavior, and sustained throughput still require physical Windows validation.
 - The GUI reports readiness only after the local stack is established and an authenticated TLS/WebSocket probe receives `WSVPN/1` READY. Periodic failures enter `Reconnecting` with jittered 1/2/4/8/15/30-second backoff while the kill switch remains active. The probe still does not prove relay Internet egress.
-- The Cloudflare Worker remains TCP-only and is not protocol-compatible with full VPN mode.
+- The Cloudflare profile uses the compatible Worker TCP/DNS endpoints and blocks generic UDP. UDP and TCP DNS at the configured marker use authenticated Worker DoH, with a 4096-byte message limit. Shared relay-IP/port firewall exceptions and hot-plug adapters remain leak-prevention gates; see [details](docs/CLOUDFLARE_BACKEND.md).
 
 ## UDP security behavior
 
@@ -198,4 +198,6 @@ The remote relay resolves destinations itself, refuses private/loopback/link-loc
 
 ## Experimental Cloudflare Worker backend
 
-`worker/` contains an optional Worker implementation using WebSocket + `cloudflare:sockets`. It is useful for TCP testing but isn't the primary backend because Workers cannot open raw TCP connections to Cloudflare IP ranges and this Worker path doesn't implement the UDP relay protocol.
+`worker/` now implements authenticated WSVPN/1 `/tunnel`, `/probe`, and a DNS-only `/dns` extension. Select **cloudflare** in the GUI or pass `--backend cloudflare`; **selfhosted** remains the default and retains TCP/UDP. System UDP DNS and length-prefixed TCP DNS are translated to the same authenticated `/dns` transport, without raw port-53 egress. The Cloudflare client requires negotiated bounded download flow control and a successful Worker DoH probe before readiness and during reconnect monitoring.
+
+Workers cannot open raw TCP to Cloudflare IP ranges; QUIC, games and other generic UDP are unavailable. No direct fallback is implemented. Read [Cloudflare setup, security limits and validation](docs/CLOUDFLARE_BACKEND.md) before testing. This is an alpha implementation pending deployed Worker and physical Windows validation.

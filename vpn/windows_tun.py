@@ -129,7 +129,7 @@ class WindowsTun:
         )
         save_state(self._state)
         if self.kill_switch:
-            install_kill_switch(self._state, self.adapters)
+            install_kill_switch(self._state, self.adapters, relay_port=self.config.relay_port)
         primary_adapter = {"index": self.primary.interface_index, "guid": self.primary.interface_guid}
         for ip in self.relay_ips:
             add_route(self._state, prefix=ip + "/32", next_hop=self.primary.gateway, adapter=primary_adapter)

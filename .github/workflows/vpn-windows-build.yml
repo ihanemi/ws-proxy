@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/vpn-mode
+      - feature/cloudflare-backend
     paths:
       - "vpn/**"
       - "relay/**"

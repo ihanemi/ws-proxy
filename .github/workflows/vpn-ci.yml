@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - feature/vpn-mode
+      - feature/cloudflare-backend
   pull_request:
     paths:
       - "vpn/**"
       - "relay/**"
+      - "worker/**"
       - "tests/test_vpn_*.py"
       - "pyproject.toml"
       - ".github/workflows/vpn-ci.yml"
@@ -42,3 +44,21 @@ jobs:
 
       - name: VPN protocol, transport and safety tests
         run: python -m unittest discover -s tests -p "test_vpn_*.py" -v
+
+  worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run check

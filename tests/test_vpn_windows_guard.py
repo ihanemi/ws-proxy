@@ -89,6 +89,17 @@ def state_fixture():
 
 
 class RecoverySafetyTests(unittest.TestCase):
+    def test_relay_bypass_blocks_udp_and_non_wss_ports_on_every_adapter(self):
+        state = state_fixture()
+        with mock.patch("vpn.windows_guard._powershell") as powershell, mock.patch("vpn.windows_guard.save_state"):
+            install_kill_switch(state, [{"alias": "Ethernet", "index": 7}, {"alias": "Wi-Fi", "index": 8}],
+                                relay_port=8443)
+        script = powershell.call_args.args[0]
+        for alias in ("Ethernet", "Wi-Fi"):
+            self.assertIn(f"-InterfaceAlias '{alias}' -RemoteAddress @('8.8.8.8') -Protocol UDP", script)
+        self.assertIn("-Protocol TCP -RemotePort @('1-8442','8444-65535')", script)
+        self.assertTrue(any("relay-UDP" in name for name in state.firewall_names))
+
     def test_corrupt_or_legacy_state_is_preserved_and_never_used(self):
         payloads = [[], {"version": 1}, {**asdict(state_fixture()), "primary_interface_index": "7; bad"},
                     {**asdict(state_fixture()), "primary_interface_index": True},

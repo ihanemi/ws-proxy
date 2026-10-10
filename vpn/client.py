@@ -29,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="WSS-backed VPN tunnel client")
     parser.add_argument("--version", action="version", version=f"WS VPN {__version__}")
     parser.add_argument("--relay", help="Relay URL, e.g. wss://vpn.example.com/tunnel")
+    parser.add_argument("--backend", choices=("selfhosted", "cloudflare"), default="selfhosted")
     parser.add_argument("--token", default=os.getenv("WS_VPN_TOKEN"), help="Tunnel token (or WS_VPN_TOKEN)")
     parser.add_argument("--listen-host", default="127.0.0.1")
     parser.add_argument("--listen-port", type=int, default=1080)
@@ -68,6 +69,8 @@ async def run(
     on_ready: Callable[[], None] | None = None,
     on_state: Callable[[ConnectionState], None] | None = None,
 ) -> None:
+    if config.backend == "cloudflare" and args.tun and args.no_kill_switch:
+        raise ValueError("Cloudflare TUN mode requires the fail-closed kill switch")
     if args.tun:
         if os.name != "nt":
             raise RuntimeError("--tun currently supports Windows only")
@@ -105,15 +108,21 @@ async def _run_session(config, args, *, stop_event=None, on_ready=None, on_state
         from .websocket import probe_relay
         # Reject bad TLS/auth/protocol settings before changing machine routes.
         await probe_relay(config)
+        if config.backend == "cloudflare":
+            from .dns import probe_dns
+            await probe_dns(config)
         if tun:
             await tun.start()
             tasks.append(asyncio.create_task(tun.wait(), name="tun2socks-process"))
             # Prove the journaled relay bypass still works after default routes
             # and the firewall guard are active.
             await probe_relay(config)
+            if config.backend == "cloudflare":
+                await probe_dns(config)
         if on_ready:
             on_ready()
         machine.transition(ConnectionState.CONNECTED)
+        logging.getLogger("ws-vpn").info(config.connection_label)
         health_task = asyncio.create_task(
             monitor_relay(config, shutdown, machine), name="relay-health-monitor"
         )
@@ -184,6 +193,8 @@ def main() -> None:
         token=args.token,
         listen_host=args.listen_host,
         listen_port=args.listen_port,
+        backend=args.backend,
+        dns_server=args.dns,
     )
     try:
         asyncio.run(_run_until_signal(config, args))
