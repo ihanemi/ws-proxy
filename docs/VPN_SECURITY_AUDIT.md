@@ -100,3 +100,22 @@ Automated Linux transport tests and Windows native/build tests are CI evidence,
 not a substitute for the physical tests above. No alpha tag or release should be
 created until the dedicated Windows E2E run is recorded and its cleanup is
 manually inspected.
+
+## Cloudflare backend extension (2026-10-10)
+
+The earlier Worker entry above records the baseline, not the new implementation.
+The Worker now validates WSVPN/1 auth/version before upgrade, performs DoH-backed
+public-address validation and numeric pinning, handles TCP framing and EOF,
+limits queues/deadlines/sessions, and supports negotiated ACK download flow
+control. `/dns` uses a fixed HTTPS resolver with bounded responses and no redirect
+following. The Cloudflare SOCKS path filters all non-marker/non-DNS UDP and has
+no direct socket fallback; startup/reconnect also require a DNS probe.
+
+The original bypass-IP exception allowed UDP and unrelated TCP ports. Additional
+journaled rules now block UDP/ICMPv4 and non-relay TCP ports on those IPs across
+all startup adapters. The exact relay TCP IP/port remains accessible to other
+processes; shared Cloudflare IPs make this a material residual bypass risk.
+Existing hot-plug and LAN exceptions also remain. This is an alpha, not a
+verified no-leak VPN. See `CLOUDFLARE_BACKEND.md` for deployment, tests, quotas,
+DNS subset limitations and physical validation gates. No live deployment,
+paid resource, real Windows traffic test or Android APK is claimed here.

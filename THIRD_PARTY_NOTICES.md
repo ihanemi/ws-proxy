@@ -24,3 +24,10 @@ The official Wintun archive contains signed redistributable DLLs and the applica
 
 - Version used to build the standalone executable: `6.22.2`
 - PyInstaller is a build-time dependency and is not the VPN transport itself.
+
+## Cloudflare Worker
+
+- ipaddr.js `2.5.0`, MIT: https://github.com/whitequark/ipaddr.js
+- Its upstream license is preserved at `worker/licenses/ipaddr.js-LICENSE`.
+- Wrangler, esbuild and Miniflare are development-only dependencies pinned in
+  `worker/package-lock.json`; they are not bundled into the Windows client.

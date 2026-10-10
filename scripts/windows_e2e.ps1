@@ -3,6 +3,9 @@ param(
     [Parameter(Mandatory = $true)][string]$Token,
     [string]$ClientPath = ".\WsVpn.exe",
     [string]$TunName = "wsvpn",
+    [ValidateSet("selfhosted", "cloudflare")][string]$Backend = "selfhosted",
+    [string]$DnsMarker = "1.1.1.1",
+    [string]$HttpsUrl = "https://example.com/",
     [int]$StartupTimeoutSeconds = 30,
     [switch]$TestIpv6Internet
 )
@@ -58,7 +61,7 @@ function Invoke-ParallelHttps {
         foreach ($number in 1..6) {
             $jobs += Start-Job -ScriptBlock {
                 & curl.exe --fail --silent --show-error --connect-timeout 8 --max-time 20 `
-                    -4 "https://example.com/?wsvpn-e2e=$using:number" -o NUL
+                    -4 $using:HttpsUrl -o NUL
                 return $LASTEXITCODE
             }
         }
@@ -96,7 +99,7 @@ $env:WS_VPN_TOKEN = $Token
 try {
     Write-Host "[1/8] Starting WS VPN and waiting for its ownership journal..."
     $process = Start-Process -FilePath $resolvedClient -ArgumentList @(
-        "--relay", $Relay, "--tun", "--tun-name", $TunName
+        "--relay", $Relay, "--backend", $Backend, "--dns", $DnsMarker, "--tun", "--tun-name", $TunName
     ) -PassThru -NoNewWindow
     $clientWasStarted = $true
     $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
@@ -118,18 +121,26 @@ try {
     Write-Host "[2/8] Verifying exact journaled routes and firewall rules..."
     Assert-SessionJournal -State $session
 
-    Write-Host "[3/8] Testing multiple UDP DNS destinations through the tunnel..."
-    foreach ($server in @("1.1.1.1", "8.8.8.8")) {
-        $udp = Resolve-DnsName example.com -Server $server -DnsOnly -QuickTimeout -ErrorAction Stop
-        $tcp = Resolve-DnsName example.com -Server $server -DnsOnly -TcpOnly -QuickTimeout -ErrorAction Stop
-        if (-not $udp -or -not $tcp) { throw "DNS through $server returned no records." }
+    if ($Backend -eq "cloudflare") {
+        Write-Host "[3/8] Testing the configured DNS marker through Worker DoH..."
+        $udp = Resolve-DnsName example.com -Server $DnsMarker -DnsOnly -QuickTimeout -ErrorAction Stop
+        if (-not $udp) { throw "Worker DNS returned no records." }
+        Write-Host "Generic UDP and TCP DNS are unsupported in Cloudflare mode."
+    }
+    else {
+        Write-Host "[3/8] Testing multiple UDP/TCP DNS destinations through the relay..."
+        foreach ($server in @("1.1.1.1", "8.8.8.8")) {
+            $udp = Resolve-DnsName example.com -Server $server -DnsOnly -QuickTimeout -ErrorAction Stop
+            $tcp = Resolve-DnsName example.com -Server $server -DnsOnly -TcpOnly -QuickTimeout -ErrorAction Stop
+            if (-not $udp -or -not $tcp) { throw "DNS through $server returned no records." }
+        }
     }
 
     Write-Host "[4/8] Testing concurrent TCP streams through the tunnel..."
     Invoke-ParallelHttps
     if ($TestIpv6Internet) {
         & curl.exe --fail --silent --show-error --connect-timeout 8 --max-time 20 `
-            -6 https://example.com/ -o NUL
+            -6 $HttpsUrl -o NUL
         if ($LASTEXITCODE -ne 0) { throw "IPv6 HTTPS test failed with curl exit code $LASTEXITCODE." }
     }
 
@@ -182,7 +193,7 @@ try {
             })
         if ($remaining) { throw "Journaled route survived cleanup: $($route.prefix)" }
     }
-    Write-Host "PASS: exact ownership, concurrent TCP, multi-target UDP/TCP DNS, bypass blocking, crash persistence, and recovery validated."
+    Write-Host "PASS: exact ownership, concurrent TCP, profile-specific DNS ($Backend), bypass blocking, crash persistence, and recovery validated."
 }
 finally {
     if ($bypassRouteCreated -and $session) {
