@@ -19,6 +19,7 @@ _ENTROPY = b"WsVpn/settings/v1"
 class AppSettings:
     version: int = CONFIG_VERSION
     relay: str = ""
+    backend: str = "selfhosted"
     dns: str = "1.1.1.1"
     tun_name: str = "wsvpn"
     ipv6: bool = True
@@ -180,6 +181,7 @@ def load_settings(
         settings = AppSettings(
             version=CONFIG_VERSION,
             relay=str(payload.get("relay", "")),
+            backend=str(payload.get("backend", "selfhosted")),
             dns=str(payload.get("dns", "1.1.1.1")),
             tun_name=str(payload.get("tun_name", "wsvpn")),
             ipv6=bool(payload.get("ipv6", True)),
@@ -187,6 +189,8 @@ def load_settings(
             remember_token=bool(payload.get("remember_token", True)),
             start_minimized=bool(payload.get("start_minimized", False)),
         )
+        if settings.backend not in ("selfhosted", "cloudflare"):
+            raise ValueError("Unknown backend profile")
         protected = str(payload.get("protected_token", ""))
         token = unprotector(protected) if protected and settings.remember_token else ""
         return settings, token

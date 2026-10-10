@@ -42,6 +42,7 @@ class VpnGui:
         self.settings = settings
 
         self.relay_var = tk.StringVar(value=settings.relay)
+        self.backend_var = tk.StringVar(value=settings.backend)
         self.token_var = tk.StringVar(value=token)
         self.dns_var = tk.StringVar(value=settings.dns)
         self.tun_name_var = tk.StringVar(value=settings.tun_name)
@@ -61,7 +62,7 @@ class VpnGui:
 
     def _configure_window(self) -> None:
         self.root.title(f"WS VPN {__version__}")
-        self.root.geometry("470x470")
+        self.root.geometry("520x520")
         self.root.minsize(450, 450)
         self.root.protocol("WM_DELETE_WINDOW", self.hide_window)
         try:
@@ -75,7 +76,9 @@ class VpnGui:
         frame.columnconfigure(1, weight=1)
 
         title = ttk.Label(frame, text="WS VPN", font=("Segoe UI", 18, "bold"))
-        title.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 14))
+        title.grid(row=0, column=0, sticky="w", pady=(0, 14))
+        ttk.Combobox(frame, textvariable=self.backend_var, values=("selfhosted", "cloudflare"),
+                     state="readonly").grid(row=0, column=1, sticky="e")
 
         ttk.Label(frame, text="Relay").grid(row=1, column=0, sticky="w", padx=(0, 10), pady=5)
         self.relay_entry = ttk.Entry(frame, textvariable=self.relay_var)
@@ -151,6 +154,7 @@ class VpnGui:
     def _settings_from_form(self) -> AppSettings:
         return AppSettings(
             relay=self.relay_var.get().strip(),
+            backend=self.backend_var.get(),
             dns=self.dns_var.get().strip(),
             tun_name=self.tun_name_var.get().strip() or "wsvpn",
             ipv6=bool(self.ipv6_var.get()),
@@ -172,7 +176,10 @@ class VpnGui:
         if not isinstance(dns, ipaddress.IPv4Address):
             raise ValueError("DNS must currently be an IPv4 address.")
 
-        config = VpnConfig(relay_url=settings.relay, token=token)
+        if settings.backend == "cloudflare" and not settings.kill_switch:
+            raise ValueError("Cloudflare requires the kill switch. Generic UDP is unavailable.")
+        config = VpnConfig(relay_url=settings.relay, token=token,
+                           backend=settings.backend, dns_server=settings.dns)
         _ = (config.relay_host, config.relay_port)
         return settings, token, config
 
@@ -305,6 +312,10 @@ class VpnGui:
             ConnectionState.DISCONNECTING,
         )
         labels = {
+            ConnectionState.CONNECTED: (
+                "Connected — TCP + DoH only; no UDP" if self.settings.backend == "cloudflare"
+                else "Connected — self-hosted TCP/UDP"
+            ),
             ConnectionState.RECONNECTING: "Reconnecting — kill switch active",
             ConnectionState.DISCONNECTING: "Disconnecting…",
             ConnectionState.FAILED: "Failed — recovery may be required",

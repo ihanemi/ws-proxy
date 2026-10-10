@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Callable, Iterator
 
 from .websocket import probe_relay
+from .dns import probe_dns
 
 log = logging.getLogger("ws-vpn.lifecycle")
 
@@ -91,6 +92,8 @@ async def monitor_relay(config, stop_event: asyncio.Event, machine: ConnectionSt
     while not await wait_or_stop(stop_event, config.health_interval):
         try:
             await probe_relay(config)
+            if getattr(config, "backend", "selfhosted") == "cloudflare":
+                await probe_dns(config)
             continue
         except (ConnectionError, OSError, TimeoutError):
             machine.transition(ConnectionState.RECONNECTING)
@@ -101,6 +104,8 @@ async def monitor_relay(config, stop_event: asyncio.Event, machine: ConnectionSt
                 return
             try:
                 await probe_relay(config)
+                if getattr(config, "backend", "selfhosted") == "cloudflare":
+                    await probe_dns(config)
             except (ConnectionError, OSError, TimeoutError):
                 log.warning("relay reconnect probe failed; retrying in bounded backoff")
                 continue

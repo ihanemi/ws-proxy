@@ -26,9 +26,10 @@ class WebSocketError(ConnectionError):
 
 
 class WebSocketTunnel:
-    def __init__(self, connection: ClientConnection, *, udp: bool = False):
+    def __init__(self, connection: ClientConnection, *, udp: bool = False, flow_control: bool = False):
         self.connection = connection
         self.udp = udp
+        self.flow_control = flow_control
         self.closed = False
 
     @classmethod
@@ -42,6 +43,7 @@ class WebSocketTunnel:
         *,
         force_ipv4: bool = True,
         resolved_ips: Sequence[str] = (),
+        flow_control: bool = False,
     ) -> WebSocketTunnel:
         validate_host(host)
         if not path.startswith("/") or any(ord(c) <= 32 or ord(c) >= 127 for c in path):
@@ -51,7 +53,10 @@ class WebSocketTunnel:
         authority = f"[{host}]" if ":" in host else host
         uri = f"wss://{authority}:{port}{path}"
         ssl_context = ssl.create_default_context()
-        udp = path.split("?", 1)[0].endswith("/udp")
+        udp = path.split("?", 1)[0].endswith(("/udp", "/dns"))
+        headers = dict(headers or {})
+        if flow_control:
+            headers["X-WSVPN-Flow-Control"] = "ack-v1"
 
         async def establish() -> WebSocketTunnel:
             targets = list(resolved_ips)
@@ -81,10 +86,12 @@ class WebSocketTunnel:
                     )
                     if connection.subprotocol != SUBPROTOCOL:
                         raise WebSocketError("Relay doesn't support WSVPN/1")
+                    if flow_control and connection.response.headers.get("X-WSVPN-Flow-Control") != "ack-v1":
+                        raise WebSocketError("Worker didn't negotiate required flow control")
                     # HTTP 101 alone doesn't prove authentication or destination connect.
                     if await connection.recv() != READY:
                         raise WebSocketError("Relay didn't acknowledge tunnel readiness")
-                    return cls(connection, udp=udp)
+                    return cls(connection, udp=udp, flow_control=flow_control)
                 except BaseException as exc:
                     if connection is not None:
                         await connection.close()
@@ -122,7 +129,10 @@ class WebSocketTunnel:
         if self.udp:
             return message
         try:
-            return decode_tcp(message)
+            payload = decode_tcp(message)
+            if self.flow_control and payload is not None:
+                await self.connection.send(b"\x04")
+            return payload
         except ValueError as exc:
             raise WebSocketError(str(exc)) from None
 

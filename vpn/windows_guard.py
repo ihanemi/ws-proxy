@@ -268,7 +268,9 @@ def _remove_recorded_routes(state: GuardState) -> None:
         _powershell(script)
 
 
-def install_kill_switch(state: GuardState, adapters: list[dict]) -> None:
+def install_kill_switch(state: GuardState, adapters: list[dict], *, relay_port: int = 443) -> None:
+    if type(relay_port) is not int or not 1 <= relay_port <= 65535:
+        raise ValueError("Invalid relay bypass port")
     if not adapters or len(adapters) > 64:
         raise RuntimeError("Unsupported interface inventory; refusing to claim kill-switch protection")
     _powershell("if (@(Get-NetFirewallProfile | Where-Object { -not $_.Enabled -or $_.AllowLocalFirewallRules -eq 'False' }).Count) "
@@ -286,6 +288,20 @@ def install_kill_switch(state: GuardState, adapters: list[dict]) -> None:
         for protocol in ("UDP", "TCP"):
             name = f"{FIREWALL_PREFIX}-{state.session_id}-{index}-dns-{protocol}"
             rules.append((name, f"-InterfaceAlias '{alias}' -Protocol {protocol} -RemotePort 53,853"))
+        # Relay IP host routes bypass TUN. Restrict those exceptions to WSS:
+        # UDP/QUIC and non-relay TCP ports must not escape to a shared edge IP.
+        relay_addresses = ",".join(f"'{ip}'" for ip in state.relay_ips)
+        for protocol in ("UDP", "ICMPv4"):
+            name = f"{FIREWALL_PREFIX}-{state.session_id}-{index}-relay-{protocol}"
+            rules.append((name, f"-InterfaceAlias '{alias}' -RemoteAddress @({relay_addresses}) -Protocol {protocol}"))
+        blocked_ports = []
+        if relay_port > 1:
+            blocked_ports.append(f"'1-{relay_port - 1}'")
+        if relay_port < 65535:
+            blocked_ports.append(f"'{relay_port + 1}-65535'")
+        name = f"{FIREWALL_PREFIX}-{state.session_id}-{index}-relay-TCP"
+        rules.append((name, f"-InterfaceAlias '{alias}' -RemoteAddress @({relay_addresses}) "
+                      f"-Protocol TCP -RemotePort @({','.join(blocked_ports)})"))
     names = ",".join(f"'{name}'" for name, _ in rules)
     _powershell(f"$names=@({names}); if (@(Get-NetFirewallRule -PolicyStore PersistentStore "
                 "| Where-Object Name -in $names).Count) { throw 'Firewall name collision' }")

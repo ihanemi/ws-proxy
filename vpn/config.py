@@ -18,8 +18,15 @@ class VpnConfig:
     relay_ips: tuple[str, ...] = ()
     max_clients: int = 256
     health_interval: float = 20.0
+    backend: str = "selfhosted"
+    dns_server: str = "1.1.1.1"
 
     def __post_init__(self) -> None:
+        if self.backend not in ("selfhosted", "cloudflare"):
+            raise ValueError("Unknown backend profile")
+        dns = ipaddress.ip_address(self.dns_server)
+        if not isinstance(dns, ipaddress.IPv4Address) or not dns.is_global or dns.is_multicast:
+            raise ValueError("DNS marker must be a public IPv4 address")
         validate_token(self.token)
         parsed = self._parsed_relay()
         validate_host(parsed.hostname or "")
@@ -69,10 +76,20 @@ class VpnConfig:
         parsed = self._parsed_relay()
         path = parsed.path or "/tunnel"
         if path.endswith("/tunnel"):
-            path = path[:-len("/tunnel")] + "/udp"
+            path = path[:-len("/tunnel")] + ("/dns" if self.backend == "cloudflare" else "/udp")
         else:
             path = path.rstrip("/") + "/udp"
         return path
+
+    @property
+    def supports_udp(self) -> bool:
+        return self.backend == "selfhosted"
+
+    @property
+    def connection_label(self) -> str:
+        if self.backend == "cloudflare":
+            return "Connected — TCP + DoH only; UDP unavailable"
+        return "Connected — self-hosted TCP/UDP"
 
     @property
     def relay_probe_path(self) -> str:

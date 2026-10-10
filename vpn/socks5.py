@@ -176,10 +176,12 @@ async def _bridge(
 
 
 class _UdpAssociateProtocol(asyncio.DatagramProtocol):
-    def __init__(self, ws: WebSocketTunnel, allowed_ip: str, allowed_port: int = 0):
+    def __init__(self, ws: WebSocketTunnel, allowed_ip: str, allowed_port: int = 0,
+                 dns_server: str | None = None):
         self.ws = ws
         self.allowed_ip = allowed_ip
         self.allowed_port = allowed_port
+        self.dns_server = dns_server
         self.transport = None
         self.client_addr = None
         self.queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=16)
@@ -196,6 +198,8 @@ class _UdpAssociateProtocol(asyncio.DatagramProtocol):
         try:
             host, port, payload = _parse_udp_request(data)
             validate_host(host)
+            if self.dns_server is not None and (host != self.dns_server or port != 53):
+                return
             if len(payload) > MAX_DATAGRAM:
                 return
             frame = encode_datagram(host, port, payload)
@@ -230,6 +234,8 @@ async def _udp_ws_to_client(
         if frame is None:
             return
         host, port, payload = decode_datagram(frame)
+        if protocol.dns_server is not None and (host != protocol.dns_server or port != 53):
+            raise SocksProtocolError("Invalid DNS response marker")
         if protocol.transport and protocol.client_addr:
             protocol.transport.sendto(
                 _build_udp_response(host, port, payload),
@@ -245,7 +251,9 @@ async def _handle_udp_associate(reader, writer, config, peer, host, port, mark_r
         timeout=config.connect_timeout, resolved_ips=config.relay_ips,
         headers={"Authorization": f"Bearer {config.token}"},
     )
-    protocol = _UdpAssociateProtocol(ws, peer[0], port)
+    protocol = _UdpAssociateProtocol(
+        ws, peer[0], port, dns_server=None if config.supports_udp else config.dns_server,
+    )
     tasks = []
     try:
         family = socket.AF_INET6 if ":" in config.listen_host else socket.AF_INET
@@ -278,12 +286,15 @@ async def _handle_connect(
     port: int,
     mark_ready,
 ) -> None:
+    if config.backend == "cloudflare" and port == 53:
+        raise SocksProtocolError("Cloudflare DNS uses the secure DNS association; TCP DNS is unsupported")
     ws = await WebSocketTunnel.connect(
         host=config.relay_host,
         port=config.relay_port,
         path=config.relay_path,
         timeout=config.connect_timeout,
         resolved_ips=config.relay_ips,
+        flow_control=config.backend == "cloudflare",
         headers={
             "Authorization": f"Bearer {config.token}",
             "X-Tunnel-Host": host,
