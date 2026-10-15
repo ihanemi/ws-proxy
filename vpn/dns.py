@@ -59,7 +59,9 @@ async def probe_dns(config) -> None:
     tunnel = await WebSocketTunnel.connect(
         config.relay_host, config.relay_port, config.relay_udp_path,
         headers={"Authorization": "Bearer " + config.token},
-        timeout=config.connect_timeout, resolved_ips=config.relay_ips,
+        timeout=config.connect_timeout, resolved_ips=config.relay_dial_ips,
+        check_path=config.backend == "cloudflare",
+        path_challenge=config.backend == "cloudflare",
     )
     try:
         packet = await asyncio.wait_for(

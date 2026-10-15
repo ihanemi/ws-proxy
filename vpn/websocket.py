@@ -6,10 +6,13 @@ import logging
 import secrets
 import socket
 import ssl
+from dataclasses import replace
 from typing import Mapping, Sequence
 
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import ConnectionClosed, InvalidHandshake
+
+from .endpoints import RelayEndpoints
 
 from .protocol import (
     DATA, MAX_MESSAGE, MAX_PAYLOAD, MAX_QUEUE, READY, SUBPROTOCOL, TCP_EOF,
@@ -23,6 +26,10 @@ WIRE_LOG.setLevel(logging.WARNING)
 
 class WebSocketError(ConnectionError):
     pass
+
+
+class RelayAddressError(WebSocketError):
+    """A network dial failed; authentication/protocol/TLS errors stay fatal."""
 
 
 class WebSocketTunnel:
@@ -44,6 +51,8 @@ class WebSocketTunnel:
         force_ipv4: bool = True,
         resolved_ips: Sequence[str] = (),
         flow_control: bool = False,
+        check_path: bool = False,
+        path_challenge: bool = False,
     ) -> WebSocketTunnel:
         validate_host(host)
         if not path.startswith("/") or any(ord(c) <= 32 or ord(c) >= 127 for c in path):
@@ -57,6 +66,8 @@ class WebSocketTunnel:
         headers = dict(headers or {})
         if flow_control:
             headers["X-WSVPN-Flow-Control"] = "ack-v1"
+        if path_challenge:
+            headers["X-WSVPN-Path-Check"] = "echo-v1"
 
         async def establish() -> WebSocketTunnel:
             targets = list(resolved_ips)
@@ -72,33 +83,70 @@ class WebSocketTunnel:
                     raise WebSocketError("Relay requires an IPv4 A record")
             else:
                 targets = [host]
+            if check_path:
+                # A fresh connection can recover a transient edge failure.
+                # At most two handshakes per address, all within one deadline.
+                targets = [target for target in targets for _ in range(2)]
+            deadline = asyncio.get_running_loop().time() + timeout
             for index, target in enumerate(targets):
                 connection = None
+                remaining = deadline - asyncio.get_running_loop().time()
+                budget = remaining / (len(targets) - index) if check_path else remaining
+                if budget <= 0:
+                    raise TimeoutError("Relay connection timed out")
                 try:
-                    connection = await connect(
-                        uri, host=target, port=port, ssl=ssl_context,
-                        # Preserve TLS hostname verification and SNI while pinning routing.
-                        server_hostname=host, proxy=None,
-                        additional_headers=headers, subprotocols=[SUBPROTOCOL],
-                        compression=None, max_size=MAX_MESSAGE, max_queue=MAX_QUEUE,
-                        open_timeout=timeout, close_timeout=3,
-                        ping_interval=20, ping_timeout=20, logger=WIRE_LOG,
-                    )
-                    if connection.subprotocol != SUBPROTOCOL:
-                        raise WebSocketError("Relay doesn't support WSVPN/1")
-                    if flow_control and connection.response.headers.get("X-WSVPN-Flow-Control") != "ack-v1":
-                        raise WebSocketError("Worker didn't negotiate required flow control")
-                    # HTTP 101 alone doesn't prove authentication or destination connect.
-                    if await connection.recv() != READY:
-                        raise WebSocketError("Relay didn't acknowledge tunnel readiness")
-                    return cls(connection, udp=udp, flow_control=flow_control)
+                    async def handshake(target=target, budget=budget):
+                        nonlocal connection
+                        connection = await connect(
+                            uri, host=target, port=port, ssl=ssl_context,
+                            # Keep hostname verification/SNI when routing to a snapshot IP.
+                            server_hostname=host, proxy=None,
+                            additional_headers=headers, subprotocols=[SUBPROTOCOL],
+                            compression=None, max_size=MAX_MESSAGE, max_queue=MAX_QUEUE,
+                            open_timeout=budget, close_timeout=3,
+                            ping_interval=20, ping_timeout=20, logger=WIRE_LOG,
+                        )
+                        if connection.subprotocol != SUBPROTOCOL:
+                            raise WebSocketError("Relay doesn't support WSVPN/1")
+                        if flow_control and connection.response.headers.get("X-WSVPN-Flow-Control") != "ack-v1":
+                            raise WebSocketError("Worker didn't negotiate required flow control")
+                        if path_challenge and connection.response.headers.get("X-WSVPN-Path-Check") != "echo-v1":
+                            raise WebSocketError("Worker requires an update for the session path check")
+                        if await connection.recv() != READY:
+                            raise WebSocketError("Relay didn't acknowledge tunnel readiness")
+                        if check_path:
+                            # READY can arrive on a path whose subsequent frames
+                            # are blackholed. Verify this exact socket before any
+                            # application payload; no new WSVPN frame is needed.
+                            pong = await connection.ping(secrets.token_bytes(16))
+                            await asyncio.wait_for(pong, min(2.0, budget))
+                        if path_challenge:
+                            challenge = b"\x05" + secrets.token_bytes(32)
+                            await connection.send(challenge)
+                            if await connection.recv() != challenge:
+                                raise WebSocketError("Worker session path check failed")
+                        return cls(connection, udp=udp, flow_control=flow_control)
+                    return await asyncio.wait_for(handshake(), budget)
                 except BaseException as exc:
                     if connection is not None:
-                        await connection.close()
+                        if isinstance(exc, (asyncio.CancelledError, TimeoutError)):
+                            # A cancelled readiness deadline must not spend a
+                            # further close-handshake timeout on a dead path.
+                            connection.transport.abort()
+                        else:
+                            await connection.close()
                     if isinstance(exc, asyncio.CancelledError):
                         raise
-                    if isinstance(exc, OSError) and index + 1 < len(targets):
-                        continue
+                    if isinstance(exc, TimeoutError):
+                        if check_path and index + 1 < len(targets):
+                            continue
+                        raise
+                    if isinstance(exc, WebSocketError):
+                        raise
+                    if isinstance(exc, OSError) and not isinstance(exc, ssl.SSLError):
+                        if index + 1 < len(targets):
+                            continue
+                        raise RelayAddressError("Relay address connection failed") from None
                     if isinstance(exc, (ConnectionClosed, InvalidHandshake, OSError)):
                         raise WebSocketError("Relay authentication, TLS, or destination connection failed") from None
                     raise
@@ -141,22 +189,70 @@ class WebSocketTunnel:
         # Always close the underlying transport, including after a received close.
         await self.connection.close()
 
+    def abort(self) -> None:
+        """Discard a failed control probe without waiting for its peer."""
+        self.closed = True
+        self.connection.transport.abort()
+
+
+async def prepare_relay(config):
+    """Bootstrap Cloudflare once, before routing, retaining every bypass IP."""
+    if config.backend != "cloudflare" or config.endpoints is not None:
+        return config
+    addresses = config.relay_ips
+    if not addresses:
+        infos = await asyncio.wait_for(asyncio.get_running_loop().getaddrinfo(
+            config.relay_host, config.relay_port, family=socket.AF_INET, type=socket.SOCK_STREAM,
+        ), config.connect_timeout)
+        addresses = tuple(dict.fromkeys(info[4][0] for info in infos))
+    return replace(config, relay_ips=addresses, endpoints=RelayEndpoints(addresses))
+
 
 async def probe_relay(config) -> None:
     """Prove TLS, authentication, negotiation, and bidirectional framing."""
+    if config.endpoints is None:
+        await _probe_once(config, config.relay_ips, config.connect_timeout)
+        return
+    addresses = config.endpoints.ordered()
+    deadline = asyncio.get_running_loop().time() + config.connect_timeout
+    for index, address in enumerate(addresses):
+        remaining = deadline - asyncio.get_running_loop().time()
+        if remaining <= 0:
+            raise TimeoutError("Relay data-path probe timed out")
+        budget = remaining / (len(addresses) - index)
+        try:
+            await asyncio.wait_for(_probe_once(config, (address,), budget), budget)
+        except (TimeoutError, RelayAddressError):
+            # Retry only the authenticated control probe. Never replay user
+            # traffic or dial outside the unchanged firewall/route snapshot.
+            if index + 1 == len(addresses):
+                raise
+            logging.getLogger("ws-vpn").warning("Relay data-path unavailable; probing next pinned address")
+            continue
+        config.endpoints.verified(address)
+        return
+
+
+async def _probe_once(config, addresses, timeout) -> None:
     tunnel = await WebSocketTunnel.connect(
         config.relay_host,
         config.relay_port,
         config.relay_probe_path,
         headers={"Authorization": "Bearer " + config.token},
-        timeout=config.connect_timeout,
-        resolved_ips=config.relay_ips,
+        timeout=timeout,
+        resolved_ips=addresses,
+        check_path=config.backend == "cloudflare",
     )
+    verified = False
     try:
         challenge = secrets.token_bytes(32)
-        await asyncio.wait_for(tunnel.send(challenge), config.connect_timeout)
-        response = await asyncio.wait_for(tunnel.recv(), config.connect_timeout)
+        await asyncio.wait_for(tunnel.send(challenge), timeout)
+        response = await asyncio.wait_for(tunnel.recv(), timeout)
         if response != challenge:
             raise WebSocketError("Relay health challenge failed")
+        verified = True
     finally:
-        await tunnel.close()
+        if verified:
+            await tunnel.close()
+        else:
+            tunnel.abort()

@@ -19,10 +19,11 @@ from websockets.exceptions import ConnectionClosed, InvalidStatus
 from relay.server import Relay, RelayLimits, _is_public_ip, _resolve_public
 from vpn.async_utils import run_pair
 from vpn.config import VpnConfig
+from vpn.endpoints import RelayEndpoints
 from vpn.protocol import DATA, MAX_MESSAGE, READY, SUBPROTOCOL, TCP_EOF, decode_tcp
 from vpn.socks5 import _UdpAssociateProtocol, _build_udp_response, handle_client
 from vpn.udp_protocol import decode_datagram, encode_datagram
-from vpn.websocket import WebSocketError, WebSocketTunnel
+from vpn.websocket import WebSocketError, WebSocketTunnel, probe_relay
 
 TOKEN = "test-only-" + "x" * 32
 
@@ -272,6 +273,90 @@ class TlsSocksIntegrationTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def tearDownClass(cls):
         cls.tmp.cleanup()
+
+    async def test_ready_but_silent_tls_address_fails_over_and_recovers(self):
+        server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        server_context.load_cert_chain(self.cert, self.key)
+        client_context = ssl.create_default_context(cafile=self.cert)
+        enabled = [False, True]
+        requests = [0, 0]
+        relay = Relay(TOKEN)
+
+        def handler(index):
+            async def probe(ws):
+                requests[index] += 1
+                await ws.send(READY)
+                challenge = await ws.recv()
+                if enabled[index]:
+                    await ws.send(challenge)
+                    await ws.close()
+                else:
+                    await ws.wait_closed()
+            return probe
+
+        async with ws_serve(handler(0), "127.0.0.1", 0, ssl=server_context,
+                            process_request=relay.process_request, subprotocols=[SUBPROTOCOL]) as first:
+            port = first.sockets[0].getsockname()[1]
+            async with ws_serve(handler(1), "127.0.0.2", port, ssl=server_context,
+                                process_request=relay.process_request, subprotocols=[SUBPROTOCOL]):
+                ips = ("127.0.0.1", "127.0.0.2")
+                cfg = VpnConfig(f"wss://localhost:{port}/tunnel", TOKEN, backend="cloudflare",
+                                relay_ips=ips, endpoints=RelayEndpoints(ips), connect_timeout=1)
+                with patch("vpn.websocket.ssl.create_default_context", return_value=client_context), patch.object(
+                    asyncio.get_running_loop(), "getaddrinfo"
+                ) as resolve:
+                    await probe_relay(cfg)
+                    self.assertEqual(cfg.relay_dial_ips, ("127.0.0.2",))
+                    enabled[:] = [True, False]
+                    await probe_relay(cfg)
+                    self.assertEqual(cfg.relay_dial_ips, ("127.0.0.1",))
+                    resolve.assert_not_called()
+                self.assertEqual(requests, [2, 2])
+                self.assertEqual(cfg.relay_ips, ips)
+
+    async def test_ping_blackhole_retries_before_payload_and_preserves_server_banner(self):
+        server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        server_context.load_cert_chain(self.cert, self.key)
+        client_context = ssl.create_default_context(cafile=self.cert)
+        received = [[], []]
+
+        async def blackhole(ws):
+            # A broken path can return READY but never deliver later PONGs.
+            send_frame = ws.protocol.send_frame
+            ws.protocol.send_frame = lambda frame: None if frame.opcode == 10 else send_frame(frame)
+            await ws.send(READY)
+            try:
+                async for message in ws:
+                    received[0].append(message)
+            except ConnectionClosed:
+                pass
+
+        async def good(ws):
+            await ws.send(READY)
+            await ws.send(DATA + b"banner")
+            received[1].append(await ws.recv())
+            await ws.send(received[1][-1])
+            await ws.wait_closed()
+
+        async with ws_serve(blackhole, "127.0.0.1", 0, ssl=server_context,
+                            subprotocols=[SUBPROTOCOL]) as first:
+            port = first.sockets[0].getsockname()[1]
+            async with ws_serve(good, "127.0.0.2", port, ssl=server_context,
+                                subprotocols=[SUBPROTOCOL]):
+                with patch("vpn.websocket.ssl.create_default_context", return_value=client_context), patch.object(
+                    asyncio.get_running_loop(), "getaddrinfo"
+                ) as resolve:
+                    tunnel = await WebSocketTunnel.connect("localhost", port, "/tunnel",
+                        headers={"Authorization": "Bearer " + TOKEN}, timeout=1,
+                        resolved_ips=("127.0.0.1", "127.0.0.2"), check_path=True)
+                    try:
+                        self.assertEqual(await tunnel.recv(), b"banner")
+                        await tunnel.send(b"one payload")
+                        self.assertEqual(await tunnel.recv(), b"one payload")
+                    finally:
+                        await tunnel.close()
+                    resolve.assert_not_called()
+                self.assertEqual(received, [[], [DATA + b"one payload"]])
 
     async def test_socks_tcp_over_verified_tls_and_pinned_address(self):
         server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
