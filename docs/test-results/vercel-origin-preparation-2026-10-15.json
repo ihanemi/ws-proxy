@@ -1,0 +1,67 @@
+{
+  "status": "LOCAL_VALIDATED_PUBLIC_BLOCKED_ON_OWNER_AUTHENTICATION",
+  "source_commit": "afef41e6e6e3545c31f718774d293b163d24b1eb",
+  "branch": "diagnostic/cloudflare-session-counters",
+  "pr2_head_preserved": "458e87726fb63766cfb9c33ee80b6c1d306519fb",
+  "validation": {
+    "linux_focused_adapter": {"tests": 4, "passed": 4, "failed": 0, "duration_ms": 20555.65821},
+    "linux_serial_complete_worker_suite": {
+      "command": "node --test --test-concurrency=1 --test-reporter=tap test/*.test.js",
+      "tests": 35, "passed": 35, "failed": 0, "skipped": 0, "duration_ms": 23952.8977,
+      "completion_footer_observed": true
+    },
+    "windows_focused_adapter": {
+      "command": "node --test --test-reporter=tap test/vercel-origin.test.js",
+      "tests": 4, "passed": 4, "failed": 0, "skipped": 0, "duration_ms": 20414.3356,
+      "completion_footer_observed": true,
+      "log_location": "%LOCALAPPDATA%/WsVpn/setup/vercel-origin-local-windows-tests.log"
+    },
+    "initial_default_concurrency_full_suite": {
+      "status": "INCOMPLETE_NOT_A_FULL_PASS", "exit_code": 0,
+      "completed_test_records_in_log": 10, "completion_footer_observed": false,
+      "cause": "Not established; no forwarding code was changed. Complete serial suite passed."
+    },
+    "python_suite_rerun": false,
+    "local_matrix": {
+      "protocol": "HTTPS over real loopback sockets with explicit ephemeral CA and hostname verification",
+      "requests_per_os": 7, "healthy_requests": 5, "body_bytes_each": 180000,
+      "sequential_healthy": 3, "concurrent_healthy": 2,
+      "stall_response_http_bytes": 0, "stall_body_bytes": 1024,
+      "stall_timer_ms": 10000, "asserted_stall_elapsed_range_ms": [9800, 12000],
+      "partial_body_arrives_before_close_by_at_least_ms": 5000,
+      "correlated_receipt_callbacks_sequence_and_close_checked": true,
+      "hosted_vercel_runtime": false
+    },
+    "negative_and_staging_cases": [
+      "malformed/unlisted/expired/duplicate correlation ID",
+      "wrong method/mode/query",
+      "rewritten path and already-consumed request",
+      "fixed sanitized log schema",
+      "four-file staging allowlist and nonempty destination refusal"
+    ]
+  },
+  "deployment_payload": {
+    "files": ["api/origin.mjs", "package.json", "vercel.json", "experiment.json"],
+    "dependencies": [], "generated_ids": 7, "validity_ms": 1200000,
+    "manifest_outside_upload_root": true,
+    "contains_vpn_or_cloudflare_credentials": false
+  },
+  "public_origin": {
+    "deployed": false, "hostname": null, "resolved_ips": [], "network_ownership": null,
+    "owner_account": null, "hobby_plan_verified": false,
+    "proposed_port": 443, "tls_certificate_verified": false,
+    "independent_public_requests_run": 0,
+    "workers_raw_tcp_ip_eligibility_verified": false,
+    "workers_raw_tcp_actual_reachability_verified": false,
+    "hosted_buffering_caching_cold_start_tested": false
+  },
+  "evidence_limit": "Function write callbacks prove Node runtime acceptance, not Vercel edge TCP transmission.",
+  "diagnostic_worker_bundle_sha256": "5095703c896769faab7cd3b90151dbbd217b86b1723086659b83bb6ed3901960",
+  "preserved_rollback_version": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c",
+  "cloudflare_operations_performed": [],
+  "live_worker_tail_started": false,
+  "vpn_credentials_uploaded": false,
+  "laptop_public_listener_opened": false,
+  "firewall_routing_billing_system_changes": false,
+  "next_required_user_action": "Complete official Vercel CLI device/browser login in the user's own account; registration if needed, free Hobby only."
+}

@@ -123,7 +123,9 @@ tests. If no suitable host already exists, stop rather than substitute a paid
 resource, a public laptop listener or a third-party endpoint without consent.
 See the [origin prerequisite assessment and staged approval gates](DIAGNOSTIC_ORIGIN_PREREQUISITE.md)
 for the existing-host finding, conditional free hosting candidate, and required
-independent verification. No origin setup or live Worker deployment is authorized.
+independent verification. Origin-only Vercel preparation/testing was subsequently
+authorized; see the [adapter and authentication status](VERCEL_ORIGIN_PREPARATION_2026-10-15.md).
+No live Worker deployment is authorized.
 
 Future origin command, only on that approved host:
 

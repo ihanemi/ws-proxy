@@ -1,5 +1,11 @@
 # Public diagnostic origin prerequisite — blocked, no deployment authorized
 
+**Follow-up:** the owner subsequently authorized preparation and independent
+testing of a temporary user-owned Vercel Hobby origin only. The
+[adapter implementation and current authentication blocker](VERCEL_ORIGIN_PREPARATION_2026-10-15.md)
+supersede this assessment's origin-setup authorization status. No Cloudflare
+Worker operation is authorized; exact public origin identity remains pending.
+
 Assessment date: 2026-10-15. This supplements
 [the prepared experiment](DIAGNOSTIC_EXPERIMENT.md); it does not authorize it.
 PR #2 remains Draft at `458e877`. No public origin or Worker was deployed,

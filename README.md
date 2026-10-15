@@ -36,8 +36,10 @@ public origin. Default Worker builds do not include the instrumentation.
 The [public-origin prerequisite assessment](docs/DIAGNOSTIC_ORIGIN_PREREQUISITE.md)
 found no existing authorized host in this project's records/settings. A temporary
 free hosting candidate is proposed, but no public hostname/IP or live synthetic
-verification exists yet. Origin setup, exact-origin approval and final Worker
-authorization are separate gates; no deployment is currently authorized.
+verification exists yet. [Origin-only Vercel preparation/testing](docs/VERCEL_ORIGIN_PREPARATION_2026-10-15.md)
+is now authorized and an isolated adapter passes local real HTTPS controls;
+public work awaits secure owner authentication. Exact-origin approval and final
+Worker authorization remain separate gates. No Cloudflare deployment is authorized.
 
 ## Choose a backend
 
