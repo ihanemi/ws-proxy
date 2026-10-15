@@ -59,6 +59,10 @@ The window and tray menu both provide **Open Logs**, which opens the rotating lo
 
 GUI settings are stored under `%APPDATA%\WsVpn\config.json`. When **Remember token securely** is enabled, the token is encrypted with Windows DPAPI for the current Windows user before it is written to disk; the plaintext token is not stored in the JSON configuration. Rotating runtime logs are written to `%LOCALAPPDATA%\WsVpn\logs\ws-vpn.log` (5 MiB per file, three backups).
 
+Windowed EXE CLI runs also write to that rotating log, including startup
+transport/DNS stages and safe failure types. An open local SOCKS port alone
+does not prove startup probes or Internet egress succeeded.
+
 ## Kill switch and crash recovery
 
 System-wide Windows mode enables a firewall kill switch by default. It creates persistent outbound block rules on the physical interface for public IPv4/IPv6 destinations while excluding the resolved IPv4 relay endpoints. Loopback, RFC1918/CGNAT/link-local LAN ranges, and multicast scopes remain reachable.
@@ -200,4 +204,4 @@ The remote relay resolves destinations itself, refuses private/loopback/link-loc
 
 `worker/` now implements authenticated WSVPN/1 `/tunnel`, `/probe`, and a DNS-only `/dns` extension. Select **cloudflare** in the GUI or pass `--backend cloudflare`; **selfhosted** remains the default and retains TCP/UDP. System UDP DNS and length-prefixed TCP DNS are translated to the same authenticated `/dns` transport, without raw port-53 egress. The Cloudflare client requires negotiated bounded download flow control and a successful Worker DoH probe before readiness and during reconnect monitoring.
 
-Workers cannot open raw TCP to Cloudflare IP ranges; QUIC, games and other generic UDP are unavailable. No direct fallback is implemented. Read [Cloudflare setup, security limits and validation](docs/CLOUDFLARE_BACKEND.md) before testing. This is an alpha implementation pending deployed Worker and physical Windows validation.
+Workers cannot open raw TCP to Cloudflare IP ranges; QUIC, games and other generic UDP are unavailable. No direct fallback is implemented. Read [Cloudflare setup, security limits and validation](docs/CLOUDFLARE_BACKEND.md) before testing. [Physical laptop checks](docs/VALIDATION_2026-10-15.md) obtained individual live TCP/DNS successes but also intermittent timeouts. Reliable packaged-client connectivity and system-wide Windows validation remain open alpha gates.

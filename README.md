@@ -7,8 +7,10 @@ This repository is a fork of Flowseal/tg-ws-proxy; the current product objective
 is system-wide VPN traffic rather than a Telegram-only proxy.
 
 **Alpha software (`0.1.0-alpha.1`).** Automated protocol tests and Windows builds
-are available. Live Cloudflare egress and physical Windows routing, crash and
-leak tests still require validation. CI artifacts are unsigned test builds,
+are available. [Laptop checks](docs/VALIDATION_2026-10-15.md) obtained live
+Cloudflare TCP/DNS responses and six concurrent verified HTTPS streams, but
+also intermittent timeouts and a failed packaged-client startup. Reliability,
+physical Windows routing, crash and leak tests remain open. Artifacts are unsigned test builds,
 not an approved stable release.
 
 ## Choose a backend
@@ -40,8 +42,8 @@ unrestricted connectivity are not guaranteed.
    files, runtime licenses and E2E script.
 2. For Worker mode, follow [Cloudflare setup](docs/CLOUDFLARE_BACKEND.md) to test
    and deploy the existing Worker with a **fresh** `TUNNEL_TOKEN`. Keep Cloudflare
-   API credentials separate from this VPN secret. No Worker has been deployed
-   by this implementation work.
+   API credentials separate from this VPN secret. The private validation
+   deployment is not a shared VPN service.
 3. Run `WsVpn.exe` elevated. Choose `cloudflare`, enter
    `wss://ws-vpn-relay.<your-subdomain>.workers.dev/tunnel` and the fresh token,
    keep DNS `1.1.1.1` and the kill switch enabled, then Connect.
@@ -53,6 +55,11 @@ Remembered GUI tokens use Windows DPAPI. Closing the window keeps the tray
 running; Quit disconnects. After a crash, inspect the session and use the
 Recover button or `WsVpn.exe --cleanup` to remove exactly the owned resources.
 
+Windowed EXE CLI runs now retain diagnostics in
+`%LOCALAPPDATA%\WsVpn\logs\ws-vpn.log`. An open SOCKS port is created before
+startup checks complete; validate authenticated transport, secure DNS and
+tunneled Internet traffic before proceeding with TUN tests.
+
 The current firewall guard leaves a material exception: **other applications
 can reach the exact relay IP/TCP port**, including shared Cloudflare edge IPs.
 Adapters attached after startup are another remaining gate. Do not treat this
@@ -63,9 +70,9 @@ alpha as a verified no-leak VPN. See [security limits and physical test steps](d
 ```bash
 git clone --branch feature/vpn-mode https://github.com/ihanemi/ws-proxy.git
 cd ws-proxy
-python -m pip install '.[dev]' certifi
-python -m ruff check vpn relay tests/test_vpn_*.py
-python -m compileall -q vpn relay
+python -m pip install '.[dev]' certifi cryptography
+python -m ruff check vpn relay vpn_windows.py tests/test_vpn_*.py
+python -m compileall -q vpn relay vpn_windows.py
 python -m unittest discover -s tests -q
 cd worker
 npm ci --ignore-scripts
@@ -73,16 +80,20 @@ npm test
 npm run check
 ```
 
-`certifi` is needed by preserved upstream tests, not the VPN core. `npm run
+`certifi` and `cryptography` are needed by preserved upstream tests, not the VPN core. `npm run
 check` bundles the Worker without deploying it. VPN CI tests Python and Worker
 behavior; Windows CI additionally verifies native token storage, builds the
 EXE/installer and checks the E2E script syntax. These checks do not replace
 packet captures, live relay traffic or tests on a physical Windows machine.
 
-The latest local checks ran 129 Python tests (4 Windows-only skips) and passed
-all 17 Worker tests, lint and the Worker dry-run build. Worker runtime DNS tests
-mock the outbound HTTPS resolver; TCP lifecycle tests inject sockets. TCP DNS
-also has a real localhost SOCKS test with fragmented/pipelined requests.
+The continuation passed 130 Python tests on Linux (4 Windows-only skips) and
+128 on the physical Windows laptop as Administrator (1 skip), plus lint and
+compile checks. All 19 Worker tests pass on both systems; the Windows Worker
+dry-run and updated EXE build pass. New tests exercise masked WebSocket frames
+over real localhost sockets. Runtime DNS tests still mock outbound HTTPS;
+TCP lifecycle tests inject sockets. TCP DNS also has a localhost SOCKS test
+with fragmented/pipelined requests. These passes do not resolve the recorded
+live timeouts or establish a stable VPN.
 
 Android is planned around native `VpnService` and the same WSVPN/1 contract.
 Implementation follows shared transport and physical Windows validation;

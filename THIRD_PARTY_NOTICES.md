@@ -29,5 +29,7 @@ The official Wintun archive contains signed redistributable DLLs and the applica
 
 - ipaddr.js `2.5.0`, MIT: https://github.com/whitequark/ipaddr.js
 - Its upstream license is preserved at `worker/licenses/ipaddr.js-LICENSE`.
-- Wrangler, esbuild and Miniflare are development-only dependencies pinned in
+- The network test client `ws` `8.21.0` is MIT-licensed:
+  https://github.com/websockets/ws . It is used only by Worker tests.
+- Wrangler, esbuild, Miniflare and ws are development-only dependencies pinned in
   `worker/package-lock.json`; they are not bundled into the Windows client.

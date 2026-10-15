@@ -3,10 +3,12 @@
 ## Delivered implementation
 
 Baseline: `feature/vpn-mode` at `b4150ed04bd012fdf110bc9330b5fb66614cf164`.
-Changes are developed on `feature/cloudflare-backend`; [PR #1](https://github.com/ihanemi/ws-proxy/pull/1)
-targets `feature/vpn-mode` for development integration after passing CI.
-No changes are merged into `main`, no stable release is published, and no
-infrastructure is deployed by this work.
+The implementation from `feature/cloudflare-backend` was merged through
+[PR #1](https://github.com/ihanemi/ws-proxy/pull/1) into `feature/vpn-mode`
+at `9583b21`. Continue from that development branch. No changes are merged into
+`main` and no stable release is published. A private free-plan test Worker has
+since been deployed; see [actual laptop results](VALIDATION_2026-10-15.md),
+including intermittent failures and the outstanding Windows gates.
 
 | Phase | Result | Remaining gate |
 | --- | --- | --- |
@@ -46,7 +48,8 @@ Cloudflare API credentials and the VPN secret serve different purposes.
 
 ```bash
 git fetch origin
-git switch --track origin/feature/cloudflare-backend
+git switch feature/vpn-mode
+git pull --ff-only origin feature/vpn-mode
 cd worker
 npm ci --ignore-scripts
 npm test
@@ -61,7 +64,8 @@ npm run deploy
 create a blank Worker named `ws-vpn-relay` in the Cloudflare dashboard first,
 then set its secret and deploy the code above. Keep the account on its existing
 free plan; this implementation has no paid bindings or automatic plan upgrades.
-Deployment is a user-side step and has not been performed here.
+Use your own endpoint and fresh VPN secret; the private validation deployment
+is not a shared VPN service.
 
 Copy the deployed `https://ws-vpn-relay.<your-subdomain>.workers.dev` URL.
 `/health` reports capabilities without claiming working Internet egress.
@@ -157,7 +161,7 @@ that it remains tunneled.
 ## Reproduce available checks
 
 ```bash
-python -m pip install '.[dev]' certifi
+python -m pip install '.[dev]' certifi cryptography
 python -m ruff check vpn relay tests/test_vpn_*.py
 python -m compileall -q vpn relay
 python -m unittest discover -s tests -q
@@ -167,7 +171,8 @@ npm test
 npm run check
 ```
 
-`certifi` is required only by preserved legacy Telegram tests, not the VPN core.
+`certifi` and `cryptography` are required by preserved legacy Telegram tests,
+not the VPN core.
 The Worker lockfile pins runtime/build dependencies and integrity hashes. Local
 runtime tests use Miniflare's version matching the pinned Wrangler runtime;
 Miniflare is a development dependency, not shipped in the Worker.
