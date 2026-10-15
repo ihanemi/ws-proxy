@@ -81,6 +81,38 @@ closes the association; reconnect requires a new secure association. Compressed
 questions and larger replies are unsupported, with no insecure fallback.
 Worker `/udp` is not exposed. Relay `/udp` is unchanged.
 
+### Per-session path check (`echo-v1`)
+
+The Cloudflare client offers `X-WSVPN-Path-Check: echo-v1` on `/tunnel` and
+`/dns` and requires the same response header. Missing negotiation fails closed
+with a Worker-update error. Deploy the updated Worker before using this client;
+the Worker still accepts existing clients that do not offer the extension.
+The self-hosted profile does not request it. The subprotocol stays `wsvpn.v1`.
+
+After READY, the client sends a **raw binary message** consisting of byte `05`
+and a fresh 32-byte nonce. The Worker must echo exactly those 33 bytes before
+either side sends application traffic. This is not a TCP DATA or UDP datagram
+and never reaches an egress socket or DoH. TCP server-first bytes are held
+behind the echo. Early application messages, malformed or duplicate challenges
+close the session; the Worker allows 10 seconds for the initial challenge.
+
+The client also checks standard WebSocket Ping/Pong (at most 2 seconds for a
+pong) before the application-level challenge. Ping/Pong alone does not prove
+Worker message processing, DNS resolution or Internet egress. Address dial,
+TLS, upgrade, READY and both checks share one configured connection deadline.
+At most two pre-application handshakes are attempted per supplied address;
+each receives a share of the remaining budget. Failed paths are aborted
+without an additional close-handshake delay. Once application bytes have been
+sent, the client does not replay them on another connection.
+
+Cloudflare startup snapshots relay IPv4 addresses before routing. Authenticated
+`/probe` challenges can promote another address within that same snapshot;
+normal TCP/DNS dials use the selected address, and the health monitor can change
+the selection for subsequent flows. The full bypass/firewall address snapshot
+is unchanged, no post-connect resolver fallback is added, and no new address
+is admitted during reconnect. Certificate, authentication and protocol failures
+remain fatal rather than triggering downgrade or destination-direct access.
+
 The Cloudflare client also accepts SOCKS CONNECT to its configured IPv4 DNS
 marker on port 53. It translates the standard two-byte big-endian DNS TCP
 length prefix to one `/dns` datagram per query, and restores the length prefix

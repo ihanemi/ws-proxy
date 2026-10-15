@@ -10,6 +10,12 @@ at `9583b21`. Continue from that development branch. No changes are merged into
 since been deployed; see [actual laptop results](VALIDATION_2026-10-15.md),
 including intermittent failures and the outstanding Windows gates.
 
+The draft [session-path update](TRANSPORT_TIMEOUT_FIX.md) requires deploying
+the updated Worker **before** using its matching Cloudflare client. The Worker
+keeps compatibility with previous clients, while the new client requires the
+explicit `echo-v1` negotiation. Its live validation is pending approval; do not
+interpret passing local tests as resolution of the recorded Cloudflare failures.
+
 | Phase | Result | Remaining gate |
 | --- | --- | --- |
 | 0 | Original Python implementation retained; baseline tests recorded | None |

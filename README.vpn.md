@@ -63,6 +63,10 @@ Windowed EXE CLI runs also write to that rotating log, including startup
 transport/DNS stages and safe failure types. An open local SOCKS port alone
 does not prove startup probes or Internet egress succeeded.
 
+The draft [session-path update](docs/TRANSPORT_TIMEOUT_FIX.md) requires a matching
+updated Worker for Cloudflare mode. Deploy the Worker first; missing `echo-v1`
+negotiation produces an explicit update error. Self-hosted mode is unchanged.
+
 ## Kill switch and crash recovery
 
 System-wide Windows mode enables a firewall kill switch by default. It creates persistent outbound block rules on the physical interface for public IPv4/IPv6 destinations while excluding the resolved IPv4 relay endpoints. Loopback, RFC1918/CGNAT/link-local LAN ranges, and multicast scopes remain reachable.

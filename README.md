@@ -13,6 +13,12 @@ also intermittent timeouts and a failed packaged-client startup. Reliability,
 physical Windows routing, crash and leak tests remain open. Artifacts are unsigned test builds,
 not an approved stable release.
 
+The draft [session-path fix](docs/TRANSPORT_TIMEOUT_FIX.md) adds a negotiated
+nonce check on each Cloudflare TCP/DNS WebSocket before application traffic.
+It requires an updated Worker deployed before the matching client. Deployment
+and final live validation await approval; the recorded timeout is **not yet
+declared resolved**. Self-hosted mode and previous Worker clients are retained.
+
 ## Choose a backend
 
 | Capability | `cloudflare` | `selfhosted` (default) |
@@ -86,14 +92,15 @@ behavior; Windows CI additionally verifies native token storage, builds the
 EXE/installer and checks the E2E script syntax. These checks do not replace
 packet captures, live relay traffic or tests on a physical Windows machine.
 
-The continuation passed 130 Python tests on Linux (4 Windows-only skips) and
-128 on the physical Windows laptop as Administrator (1 skip), plus lint and
-compile checks. All 19 Worker tests pass on both systems; the Windows Worker
-dry-run and updated EXE build pass. New tests exercise masked WebSocket frames
-over real localhost sockets. Runtime DNS tests still mock outbound HTTPS;
-TCP lifecycle tests inject sockets. TCP DNS also has a localhost SOCKS test
-with fragmented/pipelined requests. These passes do not resolve the recorded
-live timeouts or establish a stable VPN.
+The session-path draft passed 144 Python tests on Linux (4 Windows-only skips)
+and 144 on the physical Windows laptop as Administrator (no skips), plus lint
+and compile checks. OpenSSL was on PATH for the local TLS integration tests.
+All 24 Worker tests pass on both systems; Worker dry-runs and the updated local
+EXE build pass. Tests include real localhost TLS failover, masked WebSocket
+frames, nonce negotiation, server-first banners, deadlines and no payload
+replay. Runtime DNS tests still mock outbound HTTPS; TCP Worker lifecycle
+tests inject sockets. These passes do not establish live reliability of the
+final extension, a working system-wide VPN or physical leak protection.
 
 Android is planned around native `VpnService` and the same WSVPN/1 contract.
 Implementation follows shared transport and physical Windows validation;
