@@ -31,3 +31,8 @@ worker/node_modules/
 worker/.wrangler/
 worker/.dev.vars
 worker/.env*
+
+# Local diagnostic bundle; never deployed by default
+worker/diagnostic/build/
+
+/worker/node_modules
