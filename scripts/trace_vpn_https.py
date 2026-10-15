@@ -33,75 +33,78 @@ async def trace(args, token):
         events.append({'sequence': len(events) + 1, 'seconds': round(time.monotonic() - start, 3),
                        'phase': phase, 'event': name, 'bytes': size})
 
+    async def exchange():
+        nonlocal tunnel, phase
+        tunnel = await WebSocketTunnel.connect(
+            config.relay_host, config.relay_port, config.relay_path,
+            headers={'Authorization': 'Bearer ' + token,
+                     'X-Tunnel-Host': args.target, 'X-Tunnel-Port': '443'},
+            resolved_ips=(args.ip,), timeout=args.timeout,
+            flow_control=args.flow_control == 'ack-v1',
+            check_path=args.contract == 'echo-v1', path_challenge=args.contract == 'echo-v1',
+        )
+        event('ready')
+        send, recv = tunnel.connection.send, tunnel.connection.recv
+
+        async def counted_send(frame, *a, **kw):
+            event('ws.send.ack' if frame == b'\x04' else 'ws.send.data', len(frame))
+            await send(frame, *a, **kw)
+            event('ws.send.completed', len(frame))
+
+        async def counted_recv(*a, **kw):
+            frame = await recv(*a, **kw)
+            event('ws.recv.control' if len(frame) == 1 else 'ws.recv.data', len(frame))
+            return frame
+
+        tunnel.connection.send, tunnel.connection.recv = counted_send, counted_recv
+        incoming, outgoing = ssl.MemoryBIO(), ssl.MemoryBIO()
+        tls = ssl.create_default_context().wrap_bio(
+            incoming, outgoing, server_side=False, server_hostname=args.target)
+
+        async def flush():
+            while outgoing.pending:
+                data = outgoing.read()
+                event('tls.encrypted.output', len(data))
+                await tunnel.send(data)
+
+        async def feed():
+            data = await tunnel.recv()
+            if data is None:
+                event('tcp.eof')
+                incoming.write_eof()
+            else:
+                event('tls.encrypted.input', len(data))
+                incoming.write(data)
+
+        phase = 'tls_handshake'
+        while True:
+            try:
+                tls.do_handshake()
+                await flush()
+                break
+            except ssl.SSLWantReadError:
+                await flush()
+                await feed()
+        result.update(certificate_verified=True, tls=tls.version())
+        event('tls.verified')
+        phase = 'http_request'
+        request = f'GET / HTTP/1.1\r\nHost: {args.target}\r\nConnection: close\r\n\r\n'.encode()
+        event('synthetic.request.accepted', tls.write(request))
+        await flush()
+        phase = 'http_response'
+        while True:
+            try:
+                data = tls.read(32768)
+                event('synthetic.response.bytes', len(data))
+                # Count only; never persist or print the decrypted response.
+                result.update(passed=data.startswith(b'HTTP/1.'), response_bytes=len(data))
+                break
+            except ssl.SSLWantReadError:
+                await flush()
+                await feed()
+
     try:
-        async with asyncio.timeout(args.timeout):
-            tunnel = await WebSocketTunnel.connect(
-                config.relay_host, config.relay_port, config.relay_path,
-                headers={'Authorization': 'Bearer ' + token,
-                         'X-Tunnel-Host': args.target, 'X-Tunnel-Port': '443'},
-                resolved_ips=(args.ip,), timeout=args.timeout,
-                flow_control=args.flow_control == 'ack-v1',
-                check_path=args.contract == 'echo-v1', path_challenge=args.contract == 'echo-v1',
-            )
-            event('ready')
-            send, recv = tunnel.connection.send, tunnel.connection.recv
-
-            async def counted_send(frame, *a, **kw):
-                event('ws.send.ack' if frame == b'\x04' else 'ws.send.data', len(frame))
-                await send(frame, *a, **kw)
-                event('ws.send.completed', len(frame))
-
-            async def counted_recv(*a, **kw):
-                frame = await recv(*a, **kw)
-                event('ws.recv.control' if len(frame) == 1 else 'ws.recv.data', len(frame))
-                return frame
-
-            tunnel.connection.send, tunnel.connection.recv = counted_send, counted_recv
-            incoming, outgoing = ssl.MemoryBIO(), ssl.MemoryBIO()
-            tls = ssl.create_default_context().wrap_bio(
-                incoming, outgoing, server_side=False, server_hostname=args.target)
-
-            async def flush():
-                while outgoing.pending:
-                    data = outgoing.read()
-                    event('tls.encrypted.output', len(data))
-                    await tunnel.send(data)
-
-            async def feed():
-                data = await tunnel.recv()
-                if data is None:
-                    event('tcp.eof')
-                    incoming.write_eof()
-                else:
-                    event('tls.encrypted.input', len(data))
-                    incoming.write(data)
-
-            phase = 'tls_handshake'
-            while True:
-                try:
-                    tls.do_handshake()
-                    await flush()
-                    break
-                except ssl.SSLWantReadError:
-                    await flush()
-                    await feed()
-            result.update(certificate_verified=True, tls=tls.version())
-            event('tls.verified')
-            phase = 'http_request'
-            request = f'GET / HTTP/1.1\r\nHost: {args.target}\r\nConnection: close\r\n\r\n'.encode()
-            event('synthetic.request.accepted', tls.write(request))
-            await flush()
-            phase = 'http_response'
-            while True:
-                try:
-                    data = tls.read(32768)
-                    event('synthetic.response.bytes', len(data))
-                    # Count only; never persist or print the decrypted response.
-                    result.update(passed=data.startswith(b'HTTP/1.'), response_bytes=len(data))
-                    break
-                except ssl.SSLWantReadError:
-                    await flush()
-                    await feed()
+        await asyncio.wait_for(exchange(), args.timeout)
     except Exception as exc:
         result.update(error=type(exc).__name__, failed_phase=phase)
     finally:
