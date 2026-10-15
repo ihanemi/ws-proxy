@@ -15,12 +15,12 @@ Physical Windows routing, crash and leak tests remain open. Artifacts are
 unsigned test builds, not an approved stable release.
 
 The draft [session-path change](docs/TRANSPORT_TIMEOUT_FIX.md) adds a negotiated
-nonce check on each Cloudflare TCP/DNS WebSocket before application traffic.
-The approved deployment demonstrated that this check does **not** resolve the
-post-TLS traffic stall. Reconnect restored health probes and DNS, but HTTPS
-still failed. Rollback preserved settings and the existing secret binding;
-a legacy DNS smoke afterwards also timed out, so restored service health is
-not claimed. The exact cause remains unresolved.
+nonce check before application traffic. It did **not** resolve the live stall.
+A [follow-up diagnosis](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md) reproduced HTTPS
+failure with the restored Worker and original EXE, while fresh legacy source
+sessions sometimes returned response bytes. DNS recovered in the new baseline,
+but sustained application health and the internal cause remain unresolved.
+The Worker and its configuration were unchanged during that investigation.
 
 Keep the new `WsVpn-path-check` test EXE separate: it requires the updated
 `echo-v1` Worker and is incompatible with the restored previous Worker. The
@@ -100,16 +100,15 @@ behavior; Windows CI additionally verifies native token storage, builds the
 EXE/installer and checks the E2E script syntax. These checks do not replace
 packet captures, live relay traffic or tests on a physical Windows machine.
 
-The session-path draft passed 144 Python tests on Linux (4 Windows-only skips)
-and 144 on the physical Windows laptop as Administrator (no skips), plus lint
-and compile checks. OpenSSL was on PATH for the local TLS integration tests.
-All 24 Worker tests pass on both systems; Worker dry-runs and the updated local
-EXE build pass. Tests include real localhost TLS failover, masked WebSocket
-frames, nonce negotiation, server-first banners, deadlines and no payload
-replay. Runtime DNS tests still mock outbound HTTPS; TCP Worker lifecycle
-tests inject sockets. The subsequent [live acceptance failed](docs/PR2_LIVE_VALIDATION_2026-10-15.md);
-these automated passes do not establish a working system-wide VPN, restored
-service health or physical leak protection.
+The latest focused checks ran 89 VPN Python tests on Linux (4 Windows-only
+skips) and physical Windows (no skips), with no failures. All 28 Worker tests
+passed on both. New tests run the production Worker inside workerd with real
+TCP and verified HTTPS, delivering a complete 180,000-byte response in all
+four path-check/ACK combinations. Two integration tests also cover the actual
+Python SOCKS/WSS client and an origin that receives a request but withholds its
+response. CI runs this coverage explicitly. See the
+[diagnosis and reproduction commands](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md).
+These local passes do not resolve failed live acceptance or verify leak protection.
 
 Android is planned around native `VpnService` and the same WSVPN/1 contract.
 Implementation follows shared transport and physical Windows validation;
@@ -117,6 +116,7 @@ there is no Android APK yet.
 
 ## Documentation
 
+- [Latest bounded transport diagnosis and real TCP/HTTPS tests](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md)
 - [Approved PR #2 deployment, failed live tests and verified version rollback](docs/PR2_LIVE_VALIDATION_2026-10-15.md)
 - [Complete Windows client manual](README.vpn.md)
 - [Cloudflare deployment, architecture decisions and validation gates](docs/CLOUDFLARE_BACKEND.md)

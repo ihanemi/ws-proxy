@@ -93,3 +93,11 @@ only the session at that instant; it cannot guarantee subsequent traffic.
 The next focused fix needs evidence of where post-TLS data stops, with a
 repeatable comparison against the preserved Worker/client pair. No speculative
 code change or additional deployment is justified by these results alone.
+
+## Subsequent bounded diagnosis
+
+[The follow-up investigation](TRANSPORT_DIAGNOSIS_2026-10-15.md) tested the
+restored Worker with the original EXE, traced encrypted byte counts on legacy
+sessions and added real workerd/TCP/HTTPS integration coverage. It found both
+working response fragments and stalls on the legacy path, but no confirmed
+internal root cause. No further Worker deployment or production fix occurred.
