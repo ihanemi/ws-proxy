@@ -16,6 +16,7 @@ on:
       - "scripts/trace_vpn_https.py"
       - "scripts/diagnostic_https.py"
       - "scripts/collect_worker_diagnostics.py"
+      - "scripts/verify_vercel_origin.py"
       - ".github/workflows/vpn-ci.yml"
 
 permissions:
@@ -38,7 +39,7 @@ jobs:
         run: python -m pip install ".[dev]"
 
       - name: Lint VPN implementation
-        run: python -m ruff check vpn relay vpn_windows.py tests/test_vpn_*.py scripts/trace_vpn_https.py scripts/diagnostic_https.py scripts/collect_worker_diagnostics.py
+        run: python -m ruff check vpn relay vpn_windows.py tests/test_vpn_*.py scripts/trace_vpn_https.py scripts/diagnostic_https.py scripts/collect_worker_diagnostics.py scripts/verify_vercel_origin.py
 
       - name: Compile
         run: python -m compileall -q vpn relay vpn_windows.py
