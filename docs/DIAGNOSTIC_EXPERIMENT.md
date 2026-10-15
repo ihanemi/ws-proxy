@@ -121,6 +121,9 @@ laptop is included in the proposed authorization.
 reachability and certificate validation remain preconditions, not passing live
 tests. If no suitable host already exists, stop rather than substitute a paid
 resource, a public laptop listener or a third-party endpoint without consent.
+See the [origin prerequisite assessment and staged approval gates](DIAGNOSTIC_ORIGIN_PREREQUISITE.md)
+for the existing-host finding, conditional free hosting candidate, and required
+independent verification. No origin setup or live Worker deployment is authorized.
 
 Future origin command, only on that approved host:
 
@@ -256,7 +259,8 @@ fails, stop testing and report the actual active version/error; never claim
 service restoration from version metadata. The known legacy health issue may
 remain after rollback. Retain both Worker versions and matching old client.
 
-**Authorization requested, not granted:** a temporary diagnostic deployment and
-bounded sanitized tail/matrix on this exact test Worker, conditional on approval
-of the controlled public origin, followed by mandatory rollback. No action is
-taken until that separate authorization and origin prerequisite are satisfied.
+**Live authorization not granted; do not request it yet.** First obtain an
+authorized controlled public origin, verify it independently and present its
+exact identity, ownership, TLS, port and cost for separate origin approval. Only
+after that approval may final authorization for this temporary diagnostic Worker
+deployment, bounded sanitized tail/matrix and unconditional rollback be requested.

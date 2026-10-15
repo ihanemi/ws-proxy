@@ -33,6 +33,11 @@ opt-in correlated counters, a synthetic HTTPS origin and local success/stall
 tests. It is **not deployed or a production fix**. The restored legacy Worker
 and PR #2 remain unchanged; live use requires separate approval and an approved
 public origin. Default Worker builds do not include the instrumentation.
+The [public-origin prerequisite assessment](docs/DIAGNOSTIC_ORIGIN_PREREQUISITE.md)
+found no existing authorized host in this project's records/settings. A temporary
+free hosting candidate is proposed, but no public hostname/IP or live synthetic
+verification exists yet. Origin setup, exact-origin approval and final Worker
+authorization are separate gates; no deployment is currently authorized.
 
 ## Choose a backend
 
