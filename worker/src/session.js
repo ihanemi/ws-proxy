@@ -5,7 +5,7 @@ const MAX_QUEUED_BYTES = 1024 * 1024;
 const MAX_QUEUED_FRAMES = 16;
 const LEGACY_OUTPUT_LIMIT = 8 * 1024 * 1024;
 
-export function startSession(ws, tcp, mode, runtime, release, flowControl = false) {
+export function startSession(ws, tcp, mode, runtime, release, flowControl = false, pathCheck = false) {
   const { fetcher } = runtime;
   const writer = tcp?.writable.getWriter();
   const reader = tcp?.readable.getReader();
@@ -14,6 +14,9 @@ export function startSession(ws, tcp, mode, runtime, release, flowControl = fals
   let frames = 0, bytes = 0, sent = 0, ack = null;
   let chain = Promise.resolve();
   let idle;
+  let pathTimer, releasePath;
+  let pathVerified = !pathCheck;
+  const pathReady = pathCheck ? new Promise(resolve => { releasePath = resolve; }) : Promise.resolve();
   const pending = new Set();
 
   function touch() {
@@ -24,6 +27,8 @@ export function startSession(ws, tcp, mode, runtime, release, flowControl = fals
     if (closed) return;
     closed = true;
     clearTimeout(idle);
+    clearTimeout(pathTimer);
+    releasePath?.();
     abort.abort();
     ack?.reject(new Error("closed")); ack = null;
     try { ws.close(code, reason); } catch {}
@@ -79,6 +84,14 @@ export function startSession(ws, tcp, mode, runtime, release, flowControl = fals
     }
     chain = chain.then(async () => {
       if (closed) return;
+      if (!pathVerified) {
+        if (message.length !== 33 || message[0] !== 5) throw new Error("invalid path challenge");
+        ws.send(message);
+        pathVerified = true;
+        clearTimeout(pathTimer);
+        releasePath();
+        return;
+      }
       if (mode === "probe") {
         if (message.length !== 33 || message[0] !== 1) throw new Error("invalid probe");
         ws.send(message); close(); return;
@@ -110,10 +123,14 @@ export function startSession(ws, tcp, mode, runtime, release, flowControl = fals
     track(chain);
   });
   ws.send(new Uint8Array([3]));
+  if (pathCheck) pathTimer = setTimeout(() => close(1008, "path check timeout"), 10000);
   touch();
   if (tcp) {
     track((async () => {
       try {
+        // Hold server-first banners behind the challenge echo so the client
+        // never consumes application bytes as a control response.
+        await pathReady;
         while (!closed) {
           const { value, done } = await reader.read();
           if (closed) return;
