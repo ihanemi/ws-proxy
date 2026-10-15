@@ -18,6 +18,8 @@ nonce check on each Cloudflare TCP/DNS WebSocket before application traffic.
 It requires an updated Worker deployed before the matching client. Deployment
 and final live validation await approval; the recorded timeout is **not yet
 declared resolved**. Self-hosted mode and previous Worker clients are retained.
+Keep the new test build separate from the current client until that Worker
+update is approved and deployed.
 
 ## Choose a backend
 

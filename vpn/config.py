@@ -96,8 +96,8 @@ class VpnConfig:
     @property
     def connection_label(self) -> str:
         if self.backend == "cloudflare":
-            return "Connected â€” TCP + DoH only; UDP unavailable"
-        return "Connected â€” self-hosted TCP/UDP"
+            return "Connected — TCP + DoH only; UDP unavailable"
+        return "Connected — self-hosted TCP/UDP"
 
     @property
     def relay_probe_path(self) -> str:
