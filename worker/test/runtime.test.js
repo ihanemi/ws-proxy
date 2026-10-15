@@ -18,14 +18,16 @@ const headers = { Authorization: "Bearer test-only-token", Upgrade: "websocket",
 
 // Exercise the HTTP upgrade and masked network frames, not only dispatchFetch's
 // in-memory WebSocketPair. No deployment, credentials or Internet are needed.
-async function networkSocket(mf, path) {
+async function networkSocket(mf, path, extraHeaders = {}) {
   const url = new URL(path, await mf.ready);
   url.protocol = "ws:";
   const ws = new WebSocket(url, "wsvpn.v1", {
-    headers: { Authorization: headers.Authorization },
+    headers: { Authorization: headers.Authorization, ...extraHeaders },
     perMessageDeflate: false, handshakeTimeout: 3000,
   });
   const messages = [], waiters = [];
+  let responseHeaders;
+  ws.on("upgrade", response => { responseHeaders = response.headers; });
   let failure;
   const fail = error => {
     failure = error;
@@ -58,7 +60,7 @@ async function networkSocket(mf, path) {
       if (index >= 0) waiters.splice(index, 1);
     }
   };
-  return { ws, recv };
+  return { ws, recv, responseHeaders };
 }
 function inbox(ws) {
   const messages = [], waiters = [];
@@ -155,5 +157,29 @@ test("network DNS reassembles masked fragments and keeps the session usable", { 
       assert.deepEqual(await recv(), expected);
     }
     assert.equal(calls, 3);
+  } finally { ws.terminate(); }
+});
+
+test("network DNS negotiates and echoes the path challenge before resolver access", { timeout: 15000 }, async t => {
+  let calls = 0;
+  const mf = await runtime(t, async req => {
+    calls++;
+    const answer = new Uint8Array(await req.arrayBuffer()); answer[2] = 0x81; answer[3] = 0x80;
+    return new Response(answer, { headers: { "Content-Type": "application/dns-message" } });
+  });
+  const { ws, recv, responseHeaders } = await networkSocket(mf, "/dns", { "X-WSVPN-Path-Check": "echo-v1" });
+  try {
+    assert.equal(responseHeaders["x-wsvpn-path-check"], "echo-v1");
+    assert.deepEqual([...await recv()], [3]);
+    const challenge = new Uint8Array([5, ...new Uint8Array(32).fill(71)]);
+    ws.send(challenge.subarray(0, 10), { fin: false });
+    ws.send(challenge.subarray(10), { fin: true });
+    assert.deepEqual(await recv(), challenge); assert.equal(calls, 0);
+    const query = new Uint8Array([1, 1, 1, 1, 1, 1, 0, 53,
+      0, 42, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 7, ...new TextEncoder().encode("example"),
+      3, ...new TextEncoder().encode("com"), 0, 0, 1, 0, 1]);
+    ws.send(query);
+    const expected = query.slice(); expected[10] = 0x81; expected[11] = 0x80;
+    assert.deepEqual(await recv(), expected); assert.equal(calls, 1);
   } finally { ws.terminate(); }
 });

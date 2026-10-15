@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 from .protocol import MAX_PAYLOAD, validate_host, validate_token
+from .endpoints import RelayEndpoints
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,7 @@ class VpnConfig:
     health_interval: float = 20.0
     backend: str = "selfhosted"
     dns_server: str = "1.1.1.1"
+    endpoints: RelayEndpoints | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.backend not in ("selfhosted", "cloudflare"):
@@ -52,6 +54,12 @@ class VpnConfig:
             raise ValueError("Health interval must be between 5 and 300 seconds")
         for value in self.relay_ips:
             ipaddress.IPv4Address(value)
+        if self.endpoints is not None and self.endpoints.addresses != self.relay_ips:
+            raise ValueError("Relay preference must match the session address snapshot")
+
+    @property
+    def relay_dial_ips(self) -> tuple[str, ...]:
+        return self.endpoints.selected() if self.endpoints else self.relay_ips
 
     def _parsed_relay(self):
         parsed = urlparse(self.relay_url)

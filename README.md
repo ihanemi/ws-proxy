@@ -7,11 +7,25 @@ This repository is a fork of Flowseal/tg-ws-proxy; the current product objective
 is system-wide VPN traffic rather than a Telegram-only proxy.
 
 **Alpha software (`0.1.0-alpha.1`).** Automated protocol tests and Windows builds
-are available. [Laptop checks](docs/VALIDATION_2026-10-15.md) obtained live
-Cloudflare TCP/DNS responses and six concurrent verified HTTPS streams, but
-also intermittent timeouts and a failed packaged-client startup. Reliability,
-physical Windows routing, crash and leak tests remain open. Artifacts are unsigned test builds,
-not an approved stable release.
+are available. The [approved PR #2 test deployment](docs/PR2_LIVE_VALIDATION_2026-10-15.md)
+passed live UDP/TCP DNS and verified TLS 1.3 handshakes with the matching Windows
+EXE, but single and concurrent HTTPS responses still stalled. **Live acceptance
+failed and the previous test Worker version was restored. PR #2 is not merged.**
+Physical Windows routing, crash and leak tests remain open. Artifacts are
+unsigned test builds, not an approved stable release.
+
+The draft [session-path change](docs/TRANSPORT_TIMEOUT_FIX.md) adds a negotiated
+nonce check before application traffic. It did **not** resolve the live stall.
+A [follow-up diagnosis](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md) reproduced HTTPS
+failure with the restored Worker and original EXE, while fresh legacy source
+sessions sometimes returned response bytes. DNS recovered in the new baseline,
+but sustained application health and the internal cause remain unresolved.
+The Worker and its configuration were unchanged during that investigation.
+
+Keep the new `WsVpn-path-check` test EXE separate: it requires the updated
+`echo-v1` Worker and is incompatible with the restored previous Worker. The
+previous client was retained. Self-hosted functionality is preserved; no direct
+fallback, production deployment or stable release was introduced.
 
 ## Choose a backend
 
@@ -86,14 +100,15 @@ behavior; Windows CI additionally verifies native token storage, builds the
 EXE/installer and checks the E2E script syntax. These checks do not replace
 packet captures, live relay traffic or tests on a physical Windows machine.
 
-The continuation passed 130 Python tests on Linux (4 Windows-only skips) and
-128 on the physical Windows laptop as Administrator (1 skip), plus lint and
-compile checks. All 19 Worker tests pass on both systems; the Windows Worker
-dry-run and updated EXE build pass. New tests exercise masked WebSocket frames
-over real localhost sockets. Runtime DNS tests still mock outbound HTTPS;
-TCP lifecycle tests inject sockets. TCP DNS also has a localhost SOCKS test
-with fragmented/pipelined requests. These passes do not resolve the recorded
-live timeouts or establish a stable VPN.
+The latest focused checks ran 89 VPN Python tests on Linux (4 Windows-only
+skips) and physical Windows (no skips), with no failures. All 28 Worker tests
+passed on both. New tests run the production Worker inside workerd with real
+TCP and verified HTTPS, delivering a complete 180,000-byte response in all
+four path-check/ACK combinations. Two integration tests also cover the actual
+Python SOCKS/WSS client and an origin that receives a request but withholds its
+response. CI runs this coverage explicitly. See the
+[diagnosis and reproduction commands](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md).
+These local passes do not resolve failed live acceptance or verify leak protection.
 
 Android is planned around native `VpnService` and the same WSVPN/1 contract.
 Implementation follows shared transport and physical Windows validation;
@@ -101,6 +116,8 @@ there is no Android APK yet.
 
 ## Documentation
 
+- [Latest bounded transport diagnosis and real TCP/HTTPS tests](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md)
+- [Approved PR #2 deployment, failed live tests and verified version rollback](docs/PR2_LIVE_VALIDATION_2026-10-15.md)
 - [Complete Windows client manual](README.vpn.md)
 - [Cloudflare deployment, architecture decisions and validation gates](docs/CLOUDFLARE_BACKEND.md)
 - [WSVPN/1 protocol and compatible extensions](docs/VPN_PROTOCOL.md)

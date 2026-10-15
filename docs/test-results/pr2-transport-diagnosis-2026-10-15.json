@@ -1,0 +1,1461 @@
+{
+  "status": "UNRESOLVED_BOUNDED_DIAGNOSIS_NO_DEPLOYMENT",
+  "baseline": {
+    "head": "9583b21 (original CI EXE)",
+    "worker_version": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c",
+    "exe_sha256": "609187360943cb8dc159d42b6f2e23e2dbfe2f88d43eb205c134581e15645700",
+    "mode": "physical Windows EXE, SOCKS only; no routes/firewall/TUN changes",
+    "results": [
+      {
+        "name": "Original EXE listener only (not readiness)",
+        "passed": true,
+        "detail": "",
+        "utc": "2026-10-15T17:38:47Z"
+      },
+      {
+        "name": "Original EXE TCP DNS sample 1",
+        "passed": true,
+        "detail": {
+          "value": "validated transaction, question, response flags, answer count",
+          "seconds": 0.75
+        },
+        "utc": "2026-10-15T17:38:48Z"
+      },
+      {
+        "name": "Original EXE HTTPS sample 1",
+        "passed": false,
+        "detail": {
+          "stream": 0,
+          "ok": false,
+          "stage": "HTTP response",
+          "error": "AssertionError: ",
+          "seconds": 10.62,
+          "tls": "TLSv1.3",
+          "cipher": "TLS_AES_256_GCM_SHA384",
+          "certificate_verified": true
+        },
+        "utc": "2026-10-15T17:38:59Z"
+      },
+      {
+        "name": "Original EXE TCP DNS sample 2",
+        "passed": true,
+        "detail": {
+          "value": "validated transaction, question, response flags, answer count",
+          "seconds": 0.64
+        },
+        "utc": "2026-10-15T17:38:59Z"
+      },
+      {
+        "name": "Original EXE HTTPS sample 2",
+        "passed": false,
+        "detail": {
+          "stream": 1,
+          "ok": false,
+          "stage": "HTTP response",
+          "error": "AssertionError: ",
+          "seconds": 13.07,
+          "tls": "TLSv1.3",
+          "cipher": "TLS_AES_256_GCM_SHA384",
+          "certificate_verified": true
+        },
+        "utc": "2026-10-15T17:39:12Z"
+      },
+      {
+        "name": "Original EXE TCP DNS sample 3",
+        "passed": true,
+        "detail": {
+          "value": "validated transaction, question, response flags, answer count",
+          "seconds": 0.57
+        },
+        "utc": "2026-10-15T17:39:13Z"
+      },
+      {
+        "name": "Original EXE HTTPS sample 3",
+        "passed": false,
+        "detail": {
+          "stream": 2,
+          "ok": false,
+          "stage": "HTTP response",
+          "error": "AssertionError: ",
+          "seconds": 10.58,
+          "tls": "TLSv1.3",
+          "cipher": "TLS_AES_256_GCM_SHA384",
+          "certificate_verified": true
+        },
+        "utc": "2026-10-15T17:39:23Z"
+      },
+      {
+        "name": "Original EXE alive after bounded samples",
+        "passed": true,
+        "detail": "",
+        "utc": "2026-10-15T17:39:23Z"
+      },
+      {
+        "name": "Original EXE optional log redaction",
+        "passed": true,
+        "detail": "Original windowed build may not create CLI logs",
+        "utc": "2026-10-15T17:39:24Z"
+      }
+    ]
+  },
+  "trace": {
+    "client": "exact legacy source 9583b21, Windows Python 3.13",
+    "worker_version": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c",
+    "scope": "synthetic public HTTPS; byte counts and control event sequence only",
+    "runs": [
+      {
+        "address": "172.67.198.140",
+        "ack": true,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.765,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.78,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.78,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.78,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ]
+        ],
+        "passed": false,
+        "error": "TimeoutError",
+        "failed_phase": "tls_handshake",
+        "seconds": 6.784
+      },
+      {
+        "address": "172.67.198.140",
+        "ack": false,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.534,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.561,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.561,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.562,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ],
+          [
+            5,
+            0.739,
+            "tls_handshake",
+            "ws.recv.data",
+            2770
+          ],
+          [
+            6,
+            0.739,
+            "tls_handshake",
+            "tls.encrypted.input",
+            2769
+          ],
+          [
+            7,
+            0.743,
+            "tls_handshake",
+            "tls.encrypted.output",
+            80
+          ],
+          [
+            8,
+            0.743,
+            "tls_handshake",
+            "ws.send.data",
+            81
+          ],
+          [
+            9,
+            0.743,
+            "tls_handshake",
+            "ws.send.completed",
+            81
+          ],
+          [
+            10,
+            0.743,
+            "tls_handshake",
+            "tls.verified",
+            0
+          ],
+          [
+            11,
+            0.743,
+            "http_request",
+            "synthetic.request.accepted",
+            59
+          ],
+          [
+            12,
+            0.743,
+            "http_request",
+            "tls.encrypted.output",
+            81
+          ],
+          [
+            13,
+            0.743,
+            "http_request",
+            "ws.send.data",
+            82
+          ],
+          [
+            14,
+            0.743,
+            "http_request",
+            "ws.send.completed",
+            82
+          ],
+          [
+            15,
+            1.254,
+            "http_response",
+            "ws.recv.data",
+            3675
+          ],
+          [
+            16,
+            1.254,
+            "http_response",
+            "tls.encrypted.input",
+            3674
+          ],
+          [
+            17,
+            1.254,
+            "http_response",
+            "synthetic.response.bytes",
+            1529
+          ]
+        ],
+        "certificate_verified": true,
+        "tls": "TLSv1.3",
+        "http_response_bytes": 1529,
+        "passed": true,
+        "seconds": 1.254
+      },
+      {
+        "address": "104.21.34.51",
+        "ack": true,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.579,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.605,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.605,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.605,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ]
+        ],
+        "passed": false,
+        "error": "TimeoutError",
+        "failed_phase": "tls_handshake",
+        "seconds": 6.613
+      },
+      {
+        "address": "172.67.198.140",
+        "ack": true,
+        "destination": "www.microsoft.com",
+        "events": [
+          [
+            1,
+            0.55,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.577,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.577,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.578,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ],
+          [
+            5,
+            0.723,
+            "tls_handshake",
+            "ws.recv.data",
+            1369
+          ],
+          [
+            6,
+            0.723,
+            "tls_handshake",
+            "ws.send.control",
+            1
+          ],
+          [
+            7,
+            0.723,
+            "tls_handshake",
+            "ws.send.completed",
+            1
+          ],
+          [
+            8,
+            0.723,
+            "tls_handshake",
+            "tls.encrypted.input",
+            1368
+          ],
+          [
+            9,
+            0.867,
+            "tls_handshake",
+            "ws.recv.data",
+            2729
+          ],
+          [
+            10,
+            0.867,
+            "tls_handshake",
+            "ws.send.control",
+            1
+          ],
+          [
+            11,
+            0.867,
+            "tls_handshake",
+            "ws.send.completed",
+            1
+          ],
+          [
+            12,
+            0.867,
+            "tls_handshake",
+            "tls.encrypted.input",
+            2728
+          ],
+          [
+            13,
+            0.991,
+            "tls_handshake",
+            "ws.recv.data",
+            2366
+          ],
+          [
+            14,
+            0.991,
+            "tls_handshake",
+            "ws.send.control",
+            1
+          ],
+          [
+            15,
+            0.991,
+            "tls_handshake",
+            "ws.send.completed",
+            1
+          ],
+          [
+            16,
+            0.991,
+            "tls_handshake",
+            "tls.encrypted.input",
+            2365
+          ],
+          [
+            17,
+            0.993,
+            "tls_handshake",
+            "tls.encrypted.output",
+            80
+          ],
+          [
+            18,
+            0.993,
+            "tls_handshake",
+            "ws.send.data",
+            81
+          ],
+          [
+            19,
+            0.993,
+            "tls_handshake",
+            "ws.send.completed",
+            81
+          ],
+          [
+            20,
+            0.993,
+            "tls_handshake",
+            "tls.verified",
+            0
+          ],
+          [
+            21,
+            0.993,
+            "http_request",
+            "synthetic.request.accepted",
+            62
+          ],
+          [
+            22,
+            0.993,
+            "http_request",
+            "tls.encrypted.output",
+            84
+          ],
+          [
+            23,
+            0.993,
+            "http_request",
+            "ws.send.data",
+            85
+          ],
+          [
+            24,
+            0.993,
+            "http_request",
+            "ws.send.completed",
+            85
+          ]
+        ],
+        "certificate_verified": true,
+        "tls": "TLSv1.3",
+        "passed": false,
+        "error": "TimeoutError",
+        "failed_phase": "http_response",
+        "seconds": 7.001
+      }
+    ]
+  },
+  "ack_matrix": {
+    "client": "exact legacy source 9583b21, Windows Python 3.13",
+    "worker_version": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c",
+    "scope": "synthetic public HTTPS; byte counts and control event sequence only",
+    "runs": [
+      {
+        "address": "172.67.198.140",
+        "ack": true,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.687,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.703,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.704,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.704,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ],
+          [
+            5,
+            0.918,
+            "tls_handshake",
+            "ws.recv.data",
+            2770
+          ],
+          [
+            6,
+            0.918,
+            "tls_handshake",
+            "ws.send.control",
+            1
+          ],
+          [
+            7,
+            0.918,
+            "tls_handshake",
+            "ws.send.completed",
+            1
+          ],
+          [
+            8,
+            0.919,
+            "tls_handshake",
+            "tls.encrypted.input",
+            2769
+          ],
+          [
+            9,
+            0.921,
+            "tls_handshake",
+            "tls.encrypted.output",
+            80
+          ],
+          [
+            10,
+            0.921,
+            "tls_handshake",
+            "ws.send.data",
+            81
+          ],
+          [
+            11,
+            0.921,
+            "tls_handshake",
+            "ws.send.completed",
+            81
+          ],
+          [
+            12,
+            0.921,
+            "tls_handshake",
+            "tls.verified",
+            0
+          ],
+          [
+            13,
+            0.921,
+            "http_request",
+            "synthetic.request.accepted",
+            59
+          ],
+          [
+            14,
+            0.921,
+            "http_request",
+            "tls.encrypted.output",
+            81
+          ],
+          [
+            15,
+            0.921,
+            "http_request",
+            "ws.send.data",
+            82
+          ],
+          [
+            16,
+            0.921,
+            "http_request",
+            "ws.send.completed",
+            82
+          ],
+          [
+            17,
+            1.162,
+            "http_response",
+            "ws.recv.data",
+            3681
+          ],
+          [
+            18,
+            1.162,
+            "http_response",
+            "ws.send.control",
+            1
+          ],
+          [
+            19,
+            1.162,
+            "http_response",
+            "ws.send.completed",
+            1
+          ],
+          [
+            20,
+            1.162,
+            "http_response",
+            "tls.encrypted.input",
+            3680
+          ],
+          [
+            21,
+            1.162,
+            "http_response",
+            "synthetic.response.bytes",
+            1532
+          ]
+        ],
+        "certificate_verified": true,
+        "tls": "TLSv1.3",
+        "http_response_bytes": 1532,
+        "passed": true,
+        "seconds": 1.162
+      },
+      {
+        "address": "172.67.198.140",
+        "ack": false,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.595,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.61,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.61,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.61,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ]
+        ],
+        "passed": false,
+        "error": "TimeoutError",
+        "failed_phase": "tls_handshake",
+        "seconds": 6.626
+      },
+      {
+        "address": "172.67.198.140",
+        "ack": true,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.778,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.795,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.795,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.795,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ],
+          [
+            5,
+            1.085,
+            "tls_handshake",
+            "ws.recv.data",
+            2737
+          ],
+          [
+            6,
+            1.085,
+            "tls_handshake",
+            "ws.send.control",
+            1
+          ],
+          [
+            7,
+            1.085,
+            "tls_handshake",
+            "ws.send.completed",
+            1
+          ],
+          [
+            8,
+            1.085,
+            "tls_handshake",
+            "tls.encrypted.input",
+            2736
+          ],
+          [
+            9,
+            1.286,
+            "tls_handshake",
+            "ws.recv.data",
+            35
+          ],
+          [
+            10,
+            1.286,
+            "tls_handshake",
+            "ws.send.control",
+            1
+          ],
+          [
+            11,
+            1.286,
+            "tls_handshake",
+            "ws.send.completed",
+            1
+          ],
+          [
+            12,
+            1.286,
+            "tls_handshake",
+            "tls.encrypted.input",
+            34
+          ],
+          [
+            13,
+            1.288,
+            "tls_handshake",
+            "tls.encrypted.output",
+            80
+          ],
+          [
+            14,
+            1.288,
+            "tls_handshake",
+            "ws.send.data",
+            81
+          ],
+          [
+            15,
+            1.288,
+            "tls_handshake",
+            "ws.send.completed",
+            81
+          ],
+          [
+            16,
+            1.288,
+            "tls_handshake",
+            "tls.verified",
+            0
+          ],
+          [
+            17,
+            1.288,
+            "http_request",
+            "synthetic.request.accepted",
+            59
+          ],
+          [
+            18,
+            1.288,
+            "http_request",
+            "tls.encrypted.output",
+            81
+          ],
+          [
+            19,
+            1.288,
+            "http_request",
+            "ws.send.data",
+            82
+          ],
+          [
+            20,
+            1.288,
+            "http_request",
+            "ws.send.completed",
+            82
+          ]
+        ],
+        "certificate_verified": true,
+        "tls": "TLSv1.3",
+        "passed": false,
+        "error": "TimeoutError",
+        "failed_phase": "http_response",
+        "seconds": 7.301
+      },
+      {
+        "address": "172.67.198.140",
+        "ack": false,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.742,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.762,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.762,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.762,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ],
+          [
+            5,
+            1.034,
+            "tls_handshake",
+            "ws.recv.data",
+            2770
+          ],
+          [
+            6,
+            1.034,
+            "tls_handshake",
+            "tls.encrypted.input",
+            2769
+          ],
+          [
+            7,
+            1.037,
+            "tls_handshake",
+            "tls.encrypted.output",
+            80
+          ],
+          [
+            8,
+            1.037,
+            "tls_handshake",
+            "ws.send.data",
+            81
+          ],
+          [
+            9,
+            1.037,
+            "tls_handshake",
+            "ws.send.completed",
+            81
+          ],
+          [
+            10,
+            1.037,
+            "tls_handshake",
+            "tls.verified",
+            0
+          ],
+          [
+            11,
+            1.037,
+            "http_request",
+            "synthetic.request.accepted",
+            59
+          ],
+          [
+            12,
+            1.037,
+            "http_request",
+            "tls.encrypted.output",
+            81
+          ],
+          [
+            13,
+            1.037,
+            "http_request",
+            "ws.send.data",
+            82
+          ],
+          [
+            14,
+            1.037,
+            "http_request",
+            "ws.send.completed",
+            82
+          ],
+          [
+            15,
+            1.745,
+            "http_response",
+            "ws.recv.data",
+            4097
+          ],
+          [
+            16,
+            1.745,
+            "http_response",
+            "tls.encrypted.input",
+            4096
+          ],
+          [
+            17,
+            1.745,
+            "http_response",
+            "synthetic.response.bytes",
+            1533
+          ]
+        ],
+        "certificate_verified": true,
+        "tls": "TLSv1.3",
+        "http_response_bytes": 1533,
+        "passed": true,
+        "seconds": 1.745
+      },
+      {
+        "address": "172.67.198.140",
+        "ack": true,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.532,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.55,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.55,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.55,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ],
+          [
+            5,
+            0.736,
+            "tls_handshake",
+            "ws.recv.data",
+            1369
+          ],
+          [
+            6,
+            0.736,
+            "tls_handshake",
+            "ws.send.control",
+            1
+          ],
+          [
+            7,
+            0.736,
+            "tls_handshake",
+            "ws.send.completed",
+            1
+          ],
+          [
+            8,
+            0.736,
+            "tls_handshake",
+            "tls.encrypted.input",
+            1368
+          ],
+          [
+            9,
+            0.953,
+            "tls_handshake",
+            "ws.recv.data",
+            1402
+          ],
+          [
+            10,
+            0.953,
+            "tls_handshake",
+            "ws.send.control",
+            1
+          ],
+          [
+            11,
+            0.953,
+            "tls_handshake",
+            "ws.send.completed",
+            1
+          ],
+          [
+            12,
+            0.953,
+            "tls_handshake",
+            "tls.encrypted.input",
+            1401
+          ],
+          [
+            13,
+            0.956,
+            "tls_handshake",
+            "tls.encrypted.output",
+            80
+          ],
+          [
+            14,
+            0.956,
+            "tls_handshake",
+            "ws.send.data",
+            81
+          ],
+          [
+            15,
+            0.956,
+            "tls_handshake",
+            "ws.send.completed",
+            81
+          ],
+          [
+            16,
+            0.956,
+            "tls_handshake",
+            "tls.verified",
+            0
+          ],
+          [
+            17,
+            0.956,
+            "http_request",
+            "synthetic.request.accepted",
+            59
+          ],
+          [
+            18,
+            0.956,
+            "http_request",
+            "tls.encrypted.output",
+            81
+          ],
+          [
+            19,
+            0.956,
+            "http_request",
+            "ws.send.data",
+            82
+          ],
+          [
+            20,
+            0.956,
+            "http_request",
+            "ws.send.completed",
+            82
+          ]
+        ],
+        "certificate_verified": true,
+        "tls": "TLSv1.3",
+        "passed": false,
+        "error": "TimeoutError",
+        "failed_phase": "http_response",
+        "seconds": 6.967
+      },
+      {
+        "address": "172.67.198.140",
+        "ack": false,
+        "destination": "www.google.com",
+        "events": [
+          [
+            1,
+            0.492,
+            "connect",
+            "ready",
+            0
+          ],
+          [
+            2,
+            0.51,
+            "tls_handshake",
+            "tls.encrypted.output",
+            517
+          ],
+          [
+            3,
+            0.51,
+            "tls_handshake",
+            "ws.send.data",
+            518
+          ],
+          [
+            4,
+            0.51,
+            "tls_handshake",
+            "ws.send.completed",
+            518
+          ],
+          [
+            5,
+            0.71,
+            "tls_handshake",
+            "ws.recv.data",
+            2770
+          ],
+          [
+            6,
+            0.71,
+            "tls_handshake",
+            "tls.encrypted.input",
+            2769
+          ],
+          [
+            7,
+            0.712,
+            "tls_handshake",
+            "tls.encrypted.output",
+            80
+          ],
+          [
+            8,
+            0.712,
+            "tls_handshake",
+            "ws.send.data",
+            81
+          ],
+          [
+            9,
+            0.713,
+            "tls_handshake",
+            "ws.send.completed",
+            81
+          ],
+          [
+            10,
+            0.713,
+            "tls_handshake",
+            "tls.verified",
+            0
+          ],
+          [
+            11,
+            0.713,
+            "http_request",
+            "synthetic.request.accepted",
+            59
+          ],
+          [
+            12,
+            0.713,
+            "http_request",
+            "tls.encrypted.output",
+            81
+          ],
+          [
+            13,
+            0.713,
+            "http_request",
+            "ws.send.data",
+            82
+          ],
+          [
+            14,
+            0.713,
+            "http_request",
+            "ws.send.completed",
+            82
+          ],
+          [
+            15,
+            1.227,
+            "http_response",
+            "ws.recv.data",
+            4097
+          ],
+          [
+            16,
+            1.227,
+            "http_response",
+            "tls.encrypted.input",
+            4096
+          ],
+          [
+            17,
+            1.227,
+            "http_response",
+            "synthetic.response.bytes",
+            1531
+          ]
+        ],
+        "certificate_verified": true,
+        "tls": "TLSv1.3",
+        "http_response_bytes": 1531,
+        "passed": true,
+        "seconds": 1.227
+      }
+    ]
+  },
+  "event_columns": [
+    "sequence",
+    "seconds",
+    "phase",
+    "event",
+    "bytes"
+  ],
+  "tests": {
+    "linux_python": {
+      "run": 89,
+      "skipped": 4,
+      "failures": 0
+    },
+    "windows_python": {
+      "run": 89,
+      "skipped": 0,
+      "failures": 0
+    },
+    "worker_linux": {
+      "run": 28,
+      "failures": 0
+    },
+    "worker_windows": {
+      "run": 28,
+      "failures": 0
+    }
+  },
+  "no_worker_writes": true,
+  "rollback_version_unchanged": true,
+  "portable_trace": {
+    "contract": "legacy",
+    "flow_control": "ack-v1",
+    "target": "www.google.com",
+    "address": "172.67.198.140",
+    "events": [
+      {
+        "sequence": 1,
+        "seconds": 0.528,
+        "phase": "connect",
+        "event": "ready",
+        "bytes": 0
+      },
+      {
+        "sequence": 2,
+        "seconds": 0.544,
+        "phase": "tls_handshake",
+        "event": "tls.encrypted.output",
+        "bytes": 517
+      },
+      {
+        "sequence": 3,
+        "seconds": 0.544,
+        "phase": "tls_handshake",
+        "event": "ws.send.data",
+        "bytes": 518
+      },
+      {
+        "sequence": 4,
+        "seconds": 0.545,
+        "phase": "tls_handshake",
+        "event": "ws.send.completed",
+        "bytes": 518
+      },
+      {
+        "sequence": 5,
+        "seconds": 0.689,
+        "phase": "tls_handshake",
+        "event": "ws.recv.data",
+        "bytes": 2769
+      },
+      {
+        "sequence": 6,
+        "seconds": 0.689,
+        "phase": "tls_handshake",
+        "event": "ws.send.ack",
+        "bytes": 1
+      },
+      {
+        "sequence": 7,
+        "seconds": 0.689,
+        "phase": "tls_handshake",
+        "event": "ws.send.completed",
+        "bytes": 1
+      },
+      {
+        "sequence": 8,
+        "seconds": 0.689,
+        "phase": "tls_handshake",
+        "event": "tls.encrypted.input",
+        "bytes": 2768
+      },
+      {
+        "sequence": 9,
+        "seconds": 0.691,
+        "phase": "tls_handshake",
+        "event": "tls.encrypted.output",
+        "bytes": 80
+      },
+      {
+        "sequence": 10,
+        "seconds": 0.691,
+        "phase": "tls_handshake",
+        "event": "ws.send.data",
+        "bytes": 81
+      },
+      {
+        "sequence": 11,
+        "seconds": 0.691,
+        "phase": "tls_handshake",
+        "event": "ws.send.completed",
+        "bytes": 81
+      },
+      {
+        "sequence": 12,
+        "seconds": 0.691,
+        "phase": "tls_handshake",
+        "event": "tls.verified",
+        "bytes": 0
+      },
+      {
+        "sequence": 13,
+        "seconds": 0.691,
+        "phase": "http_request",
+        "event": "synthetic.request.accepted",
+        "bytes": 59
+      },
+      {
+        "sequence": 14,
+        "seconds": 0.691,
+        "phase": "http_request",
+        "event": "tls.encrypted.output",
+        "bytes": 81
+      },
+      {
+        "sequence": 15,
+        "seconds": 0.691,
+        "phase": "http_request",
+        "event": "ws.send.data",
+        "bytes": 82
+      },
+      {
+        "sequence": 16,
+        "seconds": 0.691,
+        "phase": "http_request",
+        "event": "ws.send.completed",
+        "bytes": 82
+      },
+      {
+        "sequence": 17,
+        "seconds": 1.228,
+        "phase": "http_response",
+        "event": "ws.recv.data",
+        "bytes": 4097
+      },
+      {
+        "sequence": 18,
+        "seconds": 1.228,
+        "phase": "http_response",
+        "event": "ws.send.ack",
+        "bytes": 1
+      },
+      {
+        "sequence": 19,
+        "seconds": 1.228,
+        "phase": "http_response",
+        "event": "ws.send.completed",
+        "bytes": 1
+      },
+      {
+        "sequence": 20,
+        "seconds": 1.228,
+        "phase": "http_response",
+        "event": "tls.encrypted.input",
+        "bytes": 4096
+      },
+      {
+        "sequence": 21,
+        "seconds": 1.228,
+        "phase": "http_response",
+        "event": "synthetic.response.bytes",
+        "bytes": 1531
+      }
+    ],
+    "passed": true,
+    "certificate_verified": true,
+    "tls": "TLSv1.3",
+    "response_bytes": 1531,
+    "seconds": 1.228,
+    "scope": "first HTTP response fragment only; not full transfer or service health"
+  }
+}

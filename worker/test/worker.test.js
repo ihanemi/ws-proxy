@@ -224,3 +224,59 @@ test("missing ACK times out and closes downstream rather than buffering", async 
   assert.equal(s.ws.closeCalls[0][0], 1011); assert.equal(s.ws.sent.length, 2);
   await s.finish();
 });
+
+test("negotiated path echo precedes server-first TCP bytes and application writes", async () => {
+  const s = setup();
+  const response = await s.run(s.request("/tunnel", { "X-WSVPN-Path-Check": "echo-v1" }));
+  assert.equal(response.headers["X-WSVPN-Path-Check"], "echo-v1");
+  s.controller().enqueue(new Uint8Array([7, 8]));
+  await tick(); assert.deepEqual(s.ws.sent, [[3]]);
+  const challenge = [5, ...new Uint8Array(32).fill(42)];
+  s.ws.message(challenge);
+  await tick(); assert.deepEqual(s.ws.sent, [[3], challenge, [1, 7, 8]]);
+  assert.deepEqual(s.writes, []);
+  s.ws.message([1, 9]); await tick(); assert.deepEqual(s.writes, [[9]]);
+  await s.finish(); assert.equal(s.closed(), 1);
+});
+
+test("negotiated DNS path echo has no upstream side effect", async () => {
+  let calls = 0;
+  const s = setup({ fetcher: async () => {
+    calls++;
+    return new Response(answer(), { headers: { "Content-Type": "application/dns-message" } });
+  } });
+  const response = await s.run(s.request("/dns", { "X-WSVPN-Path-Check": "echo-v1" }));
+  assert.equal(response.headers["X-WSVPN-Path-Check"], "echo-v1");
+  const challenge = [5, ...new Uint8Array(32).fill(13)];
+  s.ws.message(challenge); await tick();
+  assert.equal(calls, 0); assert.deepEqual(s.ws.sent, [[3], challenge]);
+  s.ws.message(dnsFrame()); await tick();
+  assert.equal(calls, 1); assert.deepEqual(s.ws.sent[2], [...dnsFrame(answer())]);
+  await s.finish();
+});
+
+test("early application data, malformed and duplicate path challenges fail closed", async () => {
+  const challenge = [5, ...new Uint8Array(32).fill(13)];
+  for (const path of ["/tunnel", "/dns"]) {
+    for (const early of [[1, 8], [5], [5, ...new Uint8Array(33)], [2]]) {
+      const s = setup(); await s.run(s.request(path, { "X-WSVPN-Path-Check": "echo-v1" }));
+      s.ws.message(early); await tick();
+      assert.equal(s.ws.closeCalls[0][0], 1002); assert.deepEqual(s.writes, []);
+      assert.deepEqual(s.ws.sent, [[3]]); await s.finish();
+    }
+    const s = setup(); await s.run(s.request(path, { "X-WSVPN-Path-Check": "echo-v1" }));
+    s.ws.message(challenge); await tick(); s.ws.message(challenge); await tick();
+    assert.equal(s.ws.closeCalls[0][0], 1002); await s.finish();
+  }
+});
+
+test("path check timeout releases a TCP pump waiting behind the gate", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const s = setup(); await s.run(s.request("/tunnel", { "X-WSVPN-Path-Check": "echo-v1" }));
+  s.controller().enqueue(new Uint8Array([10]));
+  t.mock.timers.tick(10001);
+  await s.finish();
+  assert.equal(s.ws.closeCalls[0][0], 1008);
+  assert.deepEqual(s.ws.sent, [[3]]); assert.deepEqual(s.writes, []);
+  assert.equal(s.closed(), 1);
+});

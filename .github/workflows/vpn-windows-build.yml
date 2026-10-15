@@ -17,6 +17,20 @@ on:
       - "THIRD_PARTY_NOTICES.md"
       - ".github/workflows/vpn-windows-build.yml"
   workflow_dispatch:
+  pull_request:
+    branches:
+      - feature/vpn-mode
+    paths:
+      - "vpn/**"
+      - "relay/**"
+      - "scripts/windows_e2e.ps1"
+      - "tests/test_vpn_*.py"
+      - "vpn_windows.py"
+      - "packaging/vpn_windows.spec"
+      - "packaging/WsVpn.iss"
+      - "pyproject.toml"
+      - "THIRD_PARTY_NOTICES.md"
+      - ".github/workflows/vpn-windows-build.yml"
 
 permissions:
   contents: read

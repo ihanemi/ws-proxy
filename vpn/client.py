@@ -97,6 +97,8 @@ async def _run_session(config, args, *, stop_event=None, on_ready=None, on_state
                 ipv6=not args.no_ipv6, kill_switch=not args.no_kill_switch,
             )
             config = await tun.prepare()
+        from .websocket import prepare_relay
+        config = await prepare_relay(config)
         ready = asyncio.Event()
         socks_task = asyncio.create_task(serve(config, ready=ready), name="socks5-server")
         ready_task = asyncio.create_task(ready.wait())

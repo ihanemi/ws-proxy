@@ -57,12 +57,14 @@ export function createHandler(runtime) {
       }
       const [client, server] = runtime.pair();
       const flowControl = path === "/tunnel" && request.headers.get("X-WSVPN-Flow-Control") === "ack-v1";
+      const pathCheck = path !== "/probe" && request.headers.get("X-WSVPN-Path-Check") === "echo-v1";
       session = startSession(server, tcp, path === "/tunnel" ? "tcp" : path.slice(1), {
         ...runtime, dnsResponse, waitUntil: task => ctx.waitUntil(task),
-      }, release, flowControl);
+      }, release, flowControl, pathCheck);
       return runtime.upgrade(client, {
         "Sec-WebSocket-Protocol": SUBPROTOCOL,
         ...(flowControl ? { "X-WSVPN-Flow-Control": "ack-v1" } : {}),
+        ...(pathCheck ? { "X-WSVPN-Path-Check": "echo-v1" } : {}),
       });
     } catch {
       if (session) session.close(1011, "upgrade failed");

@@ -249,7 +249,9 @@ async def _handle_udp_associate(reader, writer, config, peer, host, port, mark_r
         raise SocksProtocolError("UDP source must match the TCP control peer")
     ws = await WebSocketTunnel.connect(
         host=config.relay_host, port=config.relay_port, path=config.relay_udp_path,
-        timeout=config.connect_timeout, resolved_ips=config.relay_ips,
+        timeout=config.connect_timeout, resolved_ips=config.relay_dial_ips,
+        check_path=config.backend == "cloudflare",
+        path_challenge=config.backend == "cloudflare",
         headers={"Authorization": f"Bearer {config.token}"},
     )
     protocol = _UdpAssociateProtocol(
@@ -292,7 +294,9 @@ async def _handle_connect(
             raise SocksProtocolError("Cloudflare TCP DNS requires the configured DNS marker")
         ws = await WebSocketTunnel.connect(
             host=config.relay_host, port=config.relay_port, path=config.relay_udp_path,
-            timeout=config.connect_timeout, resolved_ips=config.relay_ips,
+            timeout=config.connect_timeout, resolved_ips=config.relay_dial_ips,
+            check_path=config.backend == "cloudflare",
+            path_challenge=config.backend == "cloudflare",
             headers={"Authorization": f"Bearer {config.token}"},
         )
         try:
@@ -308,7 +312,9 @@ async def _handle_connect(
         port=config.relay_port,
         path=config.relay_path,
         timeout=config.connect_timeout,
-        resolved_ips=config.relay_ips,
+        resolved_ips=config.relay_dial_ips,
+        check_path=config.backend == "cloudflare",
+        path_challenge=config.backend == "cloudflare",
         flow_control=config.backend == "cloudflare",
         headers={
             "Authorization": f"Bearer {config.token}",
