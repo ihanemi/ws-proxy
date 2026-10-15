@@ -27,6 +27,13 @@ Keep the new `WsVpn-path-check` test EXE separate: it requires the updated
 previous client was retained. Self-hosted functionality is preserved; no direct
 fallback, production deployment or stable release was introduced.
 
+A separate [diagnostic experiment](docs/DIAGNOSTIC_EXPERIMENT.md) is prepared on
+`diagnostic/cloudflare-session-counters`, based on PR #2 at `458e877`. It adds
+opt-in correlated counters, a synthetic HTTPS origin and local success/stall
+tests. It is **not deployed or a production fix**. The restored legacy Worker
+and PR #2 remain unchanged; live use requires separate approval and an approved
+public origin. Default Worker builds do not include the instrumentation.
+
 ## Choose a backend
 
 | Capability | `cloudflare` | `selfhosted` (default) |

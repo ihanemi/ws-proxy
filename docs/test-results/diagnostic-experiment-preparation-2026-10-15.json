@@ -1,0 +1,87 @@
+{
+  "status": "LOCAL_VALIDATED_NOT_DEPLOYED",
+  "base": "458e877",
+  "branch": "diagnostic/cloudflare-session-counters",
+  "manifest": {
+    "kind": "diagnostic-only-no-deployment",
+    "base": "458e877",
+    "schema": "wsvpn-diag/1",
+    "compatibility_date": "2026-09-09",
+    "production_source_hashes_lf": {
+      "src/index.js": "51a2d47e3468ba3f425c3c8df7fe1680c7f74e187359b93f391852a0a8504a41",
+      "src/handler.js": "695e965b67bda2b29c2d7b665860d4280613386d647c0cab027d5a23ccb4417c",
+      "src/session.js": "75c128dbcd662deab8323eebf2cfb7f2a8c108265a654a833f17dbc33b0b2fe5",
+      "src/security.js": "a973575a712e51705d2e2ceaa80221132d95b205bf7e0a509a34eaac0a2da6b5",
+      "src/dns.js": "d0eadb86b1b2aed4c8f4c29aff6d1ea7933cd51becfbd0a696f722d242cb7847"
+    },
+    "bundle_sha256": "5095703c896769faab7cd3b90151dbbd217b86b1723086659b83bb6ed3901960",
+    "runtime_config_changes": [],
+    "credentials_in_bundle": false,
+    "log_event_limit_per_session": 130
+  },
+  "validation": {
+    "linux_python": {
+      "run": 94,
+      "skipped": 4,
+      "failed": 0
+    },
+    "windows_python": {
+      "run": 94,
+      "skipped": 0,
+      "failed": 0
+    },
+    "worker_linux": {
+      "run": 31,
+      "failed": 0
+    },
+    "worker_windows": {
+      "run": 31,
+      "failed": 0
+    },
+    "ruff": "passed",
+    "normal_worker_bundle_contains_diagnostics": false,
+    "diagnostic_bundle_identical_on_linux_windows": true
+  },
+  "verified_cases": [
+    {
+      "mode": "ok",
+      "contracts": [
+        "legacy",
+        "echo-v1"
+      ],
+      "ack_enabled": true,
+      "client_and_origin_body_bytes": 180000,
+      "worker_io_and_cleanup_correlated": true
+    },
+    {
+      "mode": "stall-response",
+      "certificate_verified": true,
+      "origin_request_observed": true,
+      "client_and_origin_body_bytes": 0,
+      "client_timeout_expected": true,
+      "cleanup_summary_observed": true
+    },
+    {
+      "mode": "stall-body",
+      "client_and_origin_body_bytes": 1024,
+      "client_timeout_expected": true,
+      "cleanup_summary_observed": true
+    },
+    {
+      "mode": "concurrent-ok",
+      "sessions": 2,
+      "separate_ids_verified": true,
+      "body_bytes_per_session": 180000
+    }
+  ],
+  "earlier_local_harness_failures": [
+    "IPC line length limit",
+    "concurrent global test CA patch restoration",
+    "cleanup event assertions after per-session event cap; fixed by post-cleanup aggregate summary"
+  ],
+  "live_deployment": false,
+  "live_tail_started": false,
+  "public_origin_started": false,
+  "restored_worker_unchanged": true,
+  "pr2_head_unchanged": "458e877"
+}
