@@ -107,9 +107,11 @@ async def _run_session(config, args, *, stop_event=None, on_ready=None, on_state
             raise RuntimeError("SOCKS listener stopped during startup")
         from .websocket import probe_relay
         # Reject bad TLS/auth/protocol settings before changing machine routes.
+        logging.getLogger("ws-vpn").info("Validating authenticated relay transport")
         await probe_relay(config)
         if config.backend == "cloudflare":
             from .dns import probe_dns
+            logging.getLogger("ws-vpn").info("Validating Worker secure DNS")
             await probe_dns(config)
         if tun:
             await tun.start()
@@ -199,6 +201,9 @@ def main() -> None:
     try:
         asyncio.run(_run_until_signal(config, args))
     except (RuntimeError, ValueError, OSError) as exc:
+        # Exception text can originate in dependencies. Keep credentials and
+        # arbitrary remote messages out of the persistent Windows log.
+        logging.getLogger("ws-vpn").error("VPN stopped: %s", type(exc).__name__)
         raise SystemExit(str(exc)) from exc
 
 
