@@ -1,4 +1,4 @@
-# Session path verification — pending live deployment
+# Session path verification — live validation failed
 
 Branch: `fix/cloudflare-transport-timeouts`, based on `feature/vpn-mode`
 at `722a26a`. This is an alpha compatibility update, not a stable release.
@@ -44,32 +44,52 @@ fallback to the older handshake. Windows builds now run on PRs into
 - Negative tests cover early data, duplicate/malformed/absent challenge,
   timeout cleanup, absent negotiation, protocol failure, cancellation and
   prevention of application-payload replay. Server-first TCP banners are kept.
-- The updated unsigned Windows EXE was built locally with PyInstaller 6.22.2;
-  its final live Cloudflare test awaits the matching Worker deployment.
-- Live validation of **the final extension** is pending. The existing private
-  Worker has not been updated. Earlier successful and failed live observations
-  refer to the deployed old contract or intermediate client-only changes.
+- The matching unsigned Windows EXE was built locally from `024b3db` with
+  PyInstaller 6.22.2. SHA-256:
+  `3f686ff085ed50465f46bf5c86bb1a55a7bf0f103ac24be7282b635aacd668ed`.
+- With explicit approval, the final extension was deployed to the existing test
+  Worker on 2026-10-15. Live physical Windows EXE checks passed startup and
+  Worker-mediated DNS over both local SOCKS UDP and TCP.
+- HTTPS **failed**. Schannel curl obtained no successful HTTP response in the
+  single or six-stream tests. A follow-up using Python's verified TLS through
+  the same EXE completed TLS 1.3 with a valid Google certificate on all seven
+  streams, but every HTTP response timed out. This isolates the observed stall
+  after the TLS handshake; it does not identify the internal cause.
+- Incomplete local SOCKS negotiation closed after 10.01 seconds in both runs.
+  This is a client input timeout test, not an upstream blackhole timeout test.
+- Reconnection and rollback results are recorded in
+  [the approved deployment report](PR2_LIVE_VALIDATION_2026-10-15.md).
 - No TUN/routes/firewall changes or physical leak, crash, sleep or adapter-switch
-  tests were performed during this continuation. Android remains gated.
+  tests were performed. Android remains gated. These results do not establish
+  a working system-wide VPN.
 
-## Review, deployment and rollback
+## Deployment and rollback
 
-Automatic approval review rejected an attempted diagnostic replacement of the
-existing live Worker because the exact endpoint replacement and added logging
-were not explicitly approved. That diagnostic deploy did not run. The final
-change adds **no diagnostic Worker logs**. It is prepared as a draft PR;
-deployment of the final functional Worker change still awaits user approval.
-No merge or stable-release claim is appropriate before live validation.
+The user explicitly approved deployment to the existing **test Worker only**.
+The exact account, Worker name, previous immutable version, one existing
+`TUNNEL_TOKEN` secret binding and local DPAPI profile were verified first.
+No previous pasted credentials were reused, no tokens were rotated, and no
+production Worker or unrelated resource was touched.
 
-After approval, use the existing private deployment config and encrypted
-Cloudflare OAuth session to deploy this branch's `worker/src/index.js` to the
-same test Worker. Keep the current fresh VPN secret unchanged and separate from
-Cloudflare credentials. Do not enable paid bindings, account upgrades or a
-public shared service. Then use the matching client build and repeat secure
-UDP/TCP DNS, verified HTTPS and concurrency checks, including failed-path
-selection, before running any TUN tests.
+The pinned Wrangler 4.149.0 uploaded only the existing Worker source with
+`versions upload --keep-vars --strict`, then activated the uploaded immutable
+version at 100% traffic. No routes/triggers deployment, billing upgrade, new
+bindings, or diagnostic logging was applied. Before/after API reads compared
+settings, bindings, subdomain and schedules. Version tag/message annotations
+were recorded separately: these descriptive fields change on version upload
+and are not runtime configuration. The initial exact comparison stopped before
+activation on those annotations; activation resumed only after verifying that
+all remaining fields were identical.
 
-The previous development revision `722a26a` supplies the rollback Worker source
-and matching old Windows build. Reverting the Worker requires also using the
-old client for Cloudflare mode; the new client intentionally rejects the old
-Worker. Preserve encrypted settings and exact resource ownership throughout.
+Rollback uses the preserved **immutable version**, not a rebuild of an old
+commit. Its version-only activation command was dry-run before deployment and
+its actual result is in the deployment report. After rollback, use the matching
+older client: the new Cloudflare client intentionally rejects a Worker without
+`echo-v1`. Keep the new EXE separate from the previous client.
+
+The final extension **did not pass live validation**. Do not merge PR #2,
+release a stable build, or describe the timeout as resolved. A nonce echo proves
+only the session at that instant; it cannot guarantee subsequent traffic.
+The next focused fix needs evidence of where post-TLS data stops, with a
+repeatable comparison against the preserved Worker/client pair. No speculative
+code change or additional deployment is justified by these results alone.

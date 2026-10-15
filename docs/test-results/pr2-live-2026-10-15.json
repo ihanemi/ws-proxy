@@ -1,0 +1,322 @@
+{
+  "date": "2026-10-15",
+  "status": "FAILED_LIVE_VALIDATION_ROLLED_BACK",
+  "scope": "Physical Windows 11; exact PR2 EXE, SOCKS only",
+  "previous_worker_version": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c",
+  "tested_worker_version": "6d21fd85-5796-4e05-8869-8776cb0a9770",
+  "rollback": {
+    "verified": true,
+    "settings_unchanged": true,
+    "bindings_unchanged": true,
+    "local_profile_unchanged": true,
+    "legacy_dns_smoke": {
+      "scope": "Windows source client, legacy WSVPN/1; not matching EXE",
+      "passed": false,
+      "results": [
+        {
+          "address": "172.67.198.140",
+          "error": "TimeoutError"
+        },
+        {
+          "address": "104.21.34.51",
+          "error": "TimeoutError"
+        }
+      ],
+      "timeout_seconds_per_address": 8,
+      "functional_recovery_claimed": false
+    }
+  },
+  "runs": [
+    {
+      "run": 1,
+      "head": "024b3dbaf6d2e266ba96b6bfdc256007dc73759a",
+      "worker_version": "6d21fd85-5796-4e05-8869-8776cb0a9770",
+      "exe_sha256": "3f686ff085ed50465f46bf5c86bb1a55a7bf0f103ac24be7282b635aacd668ed",
+      "mode": "physical Windows EXE, SOCKS only; no routes/firewall/TUN changes",
+      "results": [
+        {
+          "name": "EXE startup transport and DNS checks",
+          "passed": true,
+          "detail": "Connected state after probes; listener alone is not readiness",
+          "utc": "2026-10-15T17:23:44Z"
+        },
+        {
+          "name": "EXE DNS TCP through Worker DoH",
+          "passed": true,
+          "detail": {
+            "value": "validated transaction, question, response flags, answer count",
+            "seconds": 1.13
+          },
+          "utc": "2026-10-15T17:23:45Z"
+        },
+        {
+          "name": "EXE DNS UDP through Worker DoH",
+          "passed": true,
+          "detail": {
+            "value": "validated transaction, question, response flags, answer count",
+            "seconds": 4.69
+          },
+          "utc": "2026-10-15T17:23:50Z"
+        },
+        {
+          "name": "EXE HTTPS strict TLS",
+          "passed": false,
+          "detail": {
+            "stream": 0,
+            "ok": false,
+            "code": 28,
+            "http": "000",
+            "seconds": 25.04,
+            "error": "curl: (28) Operation timed out after 25004 milliseconds with 0 bytes received\r\n"
+          },
+          "utc": "2026-10-15T17:24:15Z"
+        },
+        {
+          "name": "EXE six concurrent HTTPS strict TLS",
+          "passed": false,
+          "detail": [
+            {
+              "stream": 0,
+              "ok": false,
+              "code": 28,
+              "http": "000",
+              "seconds": 25.03,
+              "error": "curl: (28) Operation timed out after 25010 milliseconds with 0 bytes received\r\n"
+            },
+            {
+              "stream": 1,
+              "ok": false,
+              "code": 56,
+              "http": "000",
+              "seconds": 21.98,
+              "error": "curl: (56) schannel: server closed abruptly (missing close_notify)\r\n"
+            },
+            {
+              "stream": 2,
+              "ok": false,
+              "code": 56,
+              "http": "000",
+              "seconds": 20.62,
+              "error": "curl: (56) schannel: server closed abruptly (missing close_notify)\r\n"
+            },
+            {
+              "stream": 3,
+              "ok": false,
+              "code": 56,
+              "http": "000",
+              "seconds": 20.63,
+              "error": "curl: (56) schannel: server closed abruptly (missing close_notify)\r\n"
+            },
+            {
+              "stream": 4,
+              "ok": false,
+              "code": 56,
+              "http": "000",
+              "seconds": 24.36,
+              "error": "curl: (56) schannel: server closed abruptly (missing close_notify)\r\n"
+            },
+            {
+              "stream": 5,
+              "ok": false,
+              "code": 56,
+              "http": "000",
+              "seconds": 23.57,
+              "error": "curl: (56) schannel: server closed abruptly (missing close_notify)\r\n"
+            }
+          ],
+          "utc": "2026-10-15T17:24:40Z"
+        },
+        {
+          "name": "EXE bounded incomplete handshake timeout",
+          "passed": true,
+          "detail": {
+            "value": {
+              "incomplete_socks_handshake_closed_seconds": 10.01,
+              "scope": "local EXE handshake timeout; upstream blackhole timeout not simulated"
+            },
+            "seconds": 10.02
+          },
+          "utc": "2026-10-15T17:24:50Z"
+        },
+        {
+          "name": "EXE automatic reconnect after scoped socket faults",
+          "passed": false,
+          "detail": {
+            "error": "ValueError: too many values to unpack (expected 6)",
+            "seconds": 0.55
+          },
+          "utc": "2026-10-15T17:24:50Z",
+          "classification": "test_harness_error_before_fault_injection"
+        },
+        {
+          "name": "EXE alive after tests",
+          "passed": true,
+          "detail": "",
+          "utc": "2026-10-15T17:24:50Z"
+        },
+        {
+          "name": "EXE log contains no VPN token",
+          "passed": true,
+          "detail": "Private laptop log retained outside Git",
+          "utc": "2026-10-15T17:24:51Z"
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "head": "024b3dbaf6d2e266ba96b6bfdc256007dc73759a",
+      "worker_version": "6d21fd85-5796-4e05-8869-8776cb0a9770",
+      "exe_sha256": "3f686ff085ed50465f46bf5c86bb1a55a7bf0f103ac24be7282b635aacd668ed",
+      "mode": "physical Windows EXE, SOCKS only; no routes/firewall/TUN changes",
+      "results": [
+        {
+          "name": "EXE startup transport and DNS checks",
+          "passed": true,
+          "detail": "Connected state after probes; listener alone is not readiness",
+          "utc": "2026-10-15T17:25:47Z"
+        },
+        {
+          "name": "EXE DNS TCP through Worker DoH",
+          "passed": true,
+          "detail": {
+            "value": "validated transaction, question, response flags, answer count",
+            "seconds": 0.85
+          },
+          "utc": "2026-10-15T17:25:48Z"
+        },
+        {
+          "name": "EXE DNS UDP through Worker DoH",
+          "passed": true,
+          "detail": {
+            "value": "validated transaction, question, response flags, answer count",
+            "seconds": 3.7
+          },
+          "utc": "2026-10-15T17:25:52Z"
+        },
+        {
+          "name": "EXE HTTPS strict Python TLS; independent of Schannel",
+          "passed": false,
+          "detail": {
+            "stream": 0,
+            "ok": false,
+            "stage": "HTTP response",
+            "error": "TimeoutError: The read operation timed out",
+            "seconds": 16.17,
+            "tls": "TLSv1.3",
+            "cipher": "TLS_AES_256_GCM_SHA384",
+            "certificate_verified": true
+          },
+          "utc": "2026-10-15T17:26:08Z"
+        },
+        {
+          "name": "EXE six concurrent HTTPS strict TLS",
+          "passed": false,
+          "detail": [
+            {
+              "stream": 0,
+              "ok": false,
+              "stage": "HTTP response",
+              "error": "TimeoutError: The read operation timed out",
+              "seconds": 16.46,
+              "tls": "TLSv1.3",
+              "cipher": "TLS_AES_256_GCM_SHA384",
+              "certificate_verified": true
+            },
+            {
+              "stream": 1,
+              "ok": false,
+              "stage": "HTTP response",
+              "error": "TimeoutError: The read operation timed out",
+              "seconds": 16.21,
+              "tls": "TLSv1.3",
+              "cipher": "TLS_AES_256_GCM_SHA384",
+              "certificate_verified": true
+            },
+            {
+              "stream": 2,
+              "ok": false,
+              "stage": "HTTP response",
+              "error": "TimeoutError: The read operation timed out",
+              "seconds": 16.44,
+              "tls": "TLSv1.3",
+              "cipher": "TLS_AES_256_GCM_SHA384",
+              "certificate_verified": true
+            },
+            {
+              "stream": 3,
+              "ok": false,
+              "stage": "HTTP response",
+              "error": "TimeoutError: The read operation timed out",
+              "seconds": 16.46,
+              "tls": "TLSv1.3",
+              "cipher": "TLS_AES_256_GCM_SHA384",
+              "certificate_verified": true
+            },
+            {
+              "stream": 4,
+              "ok": false,
+              "stage": "HTTP response",
+              "error": "TimeoutError: The read operation timed out",
+              "seconds": 16.35,
+              "tls": "TLSv1.3",
+              "cipher": "TLS_AES_256_GCM_SHA384",
+              "certificate_verified": true
+            },
+            {
+              "stream": 5,
+              "ok": false,
+              "stage": "HTTP response",
+              "error": "TimeoutError: The read operation timed out",
+              "seconds": 18.65,
+              "tls": "TLSv1.3",
+              "cipher": "TLS_AES_256_GCM_SHA384",
+              "certificate_verified": true
+            }
+          ],
+          "utc": "2026-10-15T17:26:26Z"
+        },
+        {
+          "name": "EXE bounded incomplete handshake timeout",
+          "passed": true,
+          "detail": {
+            "value": {
+              "incomplete_socks_handshake_closed_seconds": 10.01,
+              "scope": "local EXE handshake timeout; upstream blackhole timeout not simulated"
+            },
+            "seconds": 10.01
+          },
+          "utc": "2026-10-15T17:26:36Z"
+        },
+        {
+          "name": "EXE automatic reconnect after scoped socket faults",
+          "passed": false,
+          "detail": {
+            "error": "AssertionError: {'stream': 0, 'ok': False, 'stage': 'HTTP response', 'error': 'TimeoutError: The read operation timed out', 'seconds': 20.04, 'tls': 'TLSv1.3', 'cipher': 'TLS_AES_256_GCM_SHA384', 'certificate_verified': True}",
+            "seconds": 50.99
+          },
+          "utc": "2026-10-15T17:27:27Z",
+          "classification": "health_and_dns_recovered_but_https_failed"
+        },
+        {
+          "name": "EXE alive after tests",
+          "passed": true,
+          "detail": "",
+          "utc": "2026-10-15T17:27:27Z"
+        },
+        {
+          "name": "EXE log contains no VPN token",
+          "passed": true,
+          "detail": "Private laptop log retained outside Git",
+          "utc": "2026-10-15T17:27:28Z"
+        }
+      ]
+    }
+  ],
+  "not_validated": [
+    "physical TUN/routing/IPv6",
+    "DNS/IP leakage",
+    "kill switch and crash recovery",
+    "adapter switching and sleep/resume",
+    "live upstream blackhole timeout"
+  ]
+}

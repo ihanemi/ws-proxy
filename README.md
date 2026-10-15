@@ -7,19 +7,25 @@ This repository is a fork of Flowseal/tg-ws-proxy; the current product objective
 is system-wide VPN traffic rather than a Telegram-only proxy.
 
 **Alpha software (`0.1.0-alpha.1`).** Automated protocol tests and Windows builds
-are available. [Laptop checks](docs/VALIDATION_2026-10-15.md) obtained live
-Cloudflare TCP/DNS responses and six concurrent verified HTTPS streams, but
-also intermittent timeouts and a failed packaged-client startup. Reliability,
-physical Windows routing, crash and leak tests remain open. Artifacts are unsigned test builds,
-not an approved stable release.
+are available. The [approved PR #2 test deployment](docs/PR2_LIVE_VALIDATION_2026-10-15.md)
+passed live UDP/TCP DNS and verified TLS 1.3 handshakes with the matching Windows
+EXE, but single and concurrent HTTPS responses still stalled. **Live acceptance
+failed and the previous test Worker version was restored. PR #2 is not merged.**
+Physical Windows routing, crash and leak tests remain open. Artifacts are
+unsigned test builds, not an approved stable release.
 
-The draft [session-path fix](docs/TRANSPORT_TIMEOUT_FIX.md) adds a negotiated
+The draft [session-path change](docs/TRANSPORT_TIMEOUT_FIX.md) adds a negotiated
 nonce check on each Cloudflare TCP/DNS WebSocket before application traffic.
-It requires an updated Worker deployed before the matching client. Deployment
-and final live validation await approval; the recorded timeout is **not yet
-declared resolved**. Self-hosted mode and previous Worker clients are retained.
-Keep the new test build separate from the current client until that Worker
-update is approved and deployed.
+The approved deployment demonstrated that this check does **not** resolve the
+post-TLS traffic stall. Reconnect restored health probes and DNS, but HTTPS
+still failed. Rollback preserved settings and the existing secret binding;
+a legacy DNS smoke afterwards also timed out, so restored service health is
+not claimed. The exact cause remains unresolved.
+
+Keep the new `WsVpn-path-check` test EXE separate: it requires the updated
+`echo-v1` Worker and is incompatible with the restored previous Worker. The
+previous client was retained. Self-hosted functionality is preserved; no direct
+fallback, production deployment or stable release was introduced.
 
 ## Choose a backend
 
@@ -101,8 +107,9 @@ All 24 Worker tests pass on both systems; Worker dry-runs and the updated local
 EXE build pass. Tests include real localhost TLS failover, masked WebSocket
 frames, nonce negotiation, server-first banners, deadlines and no payload
 replay. Runtime DNS tests still mock outbound HTTPS; TCP Worker lifecycle
-tests inject sockets. These passes do not establish live reliability of the
-final extension, a working system-wide VPN or physical leak protection.
+tests inject sockets. The subsequent [live acceptance failed](docs/PR2_LIVE_VALIDATION_2026-10-15.md);
+these automated passes do not establish a working system-wide VPN, restored
+service health or physical leak protection.
 
 Android is planned around native `VpnService` and the same WSVPN/1 contract.
 Implementation follows shared transport and physical Windows validation;
@@ -110,6 +117,7 @@ there is no Android APK yet.
 
 ## Documentation
 
+- [Approved PR #2 deployment, failed live tests and verified version rollback](docs/PR2_LIVE_VALIDATION_2026-10-15.md)
 - [Complete Windows client manual](README.vpn.md)
 - [Cloudflare deployment, architecture decisions and validation gates](docs/CLOUDFLARE_BACKEND.md)
 - [WSVPN/1 protocol and compatible extensions](docs/VPN_PROTOCOL.md)
