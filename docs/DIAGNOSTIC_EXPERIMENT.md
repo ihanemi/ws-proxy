@@ -117,9 +117,11 @@ A second Worker or a Cloudflare-proxied origin is unsuitable for this raw-TCP
 experiment. No VPS purchase, new account, DNS/firewall change or exposure of the
 laptop is included in the proposed authorization.
 
-**No public origin hostname/server has been supplied or provisioned.** Public
-reachability and certificate validation remain preconditions, not passing live
-tests. If no suitable host already exists, stop rather than substitute a paid
+**At preparation time no public origin hostname/server had been supplied.** A
+[subsequently authorized Vercel-only trial](VERCEL_ORIGIN_VALIDATION_2026-10-15.md)
+verified public addresses and TLS but failed all seven functional controls with
+HTTP 400. The temporary origin is protected again and is not accepted for this
+experiment. If no suitable host already exists, stop rather than substitute a paid
 resource, a public laptop listener or a third-party endpoint without consent.
 See the [origin prerequisite assessment and staged approval gates](DIAGNOSTIC_ORIGIN_PREREQUISITE.md)
 for the existing-host finding, conditional free hosting candidate, and required

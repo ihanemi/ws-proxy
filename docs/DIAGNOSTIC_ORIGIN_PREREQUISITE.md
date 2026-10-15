@@ -1,5 +1,10 @@
 # Public diagnostic origin prerequisite — blocked, no deployment authorized
 
+**Latest outcome:** the [separately authorized Vercel origin trial](VERCEL_ORIGIN_VALIDATION_2026-10-15.md)
+established the public hostname/IP/TLS/ownership, but all seven requests returned
+HTTP 400. The origin remains unsuitable and is protected pending review. No
+Worker deployment or connection is authorized. The assessment below is historical.
+
 **Follow-up:** the owner subsequently authorized preparation and independent
 testing of a temporary user-owned Vercel Hobby origin only. The
 [adapter implementation and current authentication blocker](VERCEL_ORIGIN_PREPARATION_2026-10-15.md)

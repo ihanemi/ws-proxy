@@ -1,5 +1,10 @@
 # Vercel origin preparation — local validation, authentication required
 
+**Historical preparation record:** owner login subsequently completed. The
+[authorized hosted trial](VERCEL_ORIGIN_VALIDATION_2026-10-15.md) verified public
+DNS/ownership/TLS but failed all seven controls with HTTP 400. The temporary
+project is protected again; no diagnostic Worker use is authorized.
+
 The owner authorized **only** a temporary user-owned Vercel Hobby origin and
 independent tests. Account registration/authentication must be completed securely
 by the owner. No Cloudflare upload, deployment, activation, modification or live

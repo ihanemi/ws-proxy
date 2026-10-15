@@ -1,0 +1,799 @@
+{
+  "status": "REJECTED_INITIAL_HOSTED_ORIGIN_STOPPED_FOR_REVIEW",
+  "date_utc": "2026-10-15",
+  "date_tehran": "2026-10-16",
+  "source": {
+    "origin_adapter_commit": "afef41e",
+    "independent_client_commit": "6b3077a",
+    "branch": "diagnostic/cloudflare-session-counters"
+  },
+  "ownership": {
+    "username": "ihanemi",
+    "scope": "hanemi",
+    "name": "Hanemi",
+    "team_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+    "role": "OWNER",
+    "plan": "hobby",
+    "plan_monthly_price_usd": 0,
+    "paid_upgrade_or_addons_enabled": false,
+    "invoices_audited": false
+  },
+  "deployment": {
+    "id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+    "url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+    "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+    "teamId": "team_rGnSqY0IkqM6gracJSAOzW50",
+    "readyState": "READY",
+    "target": "production",
+    "aliases": [
+      "ws-vpn-diag-origin-afef41e.vercel.app",
+      "ws-vpn-diag-origin-afef41e-hanemi.vercel.app"
+    ],
+    "regions": [
+      "iad1"
+    ],
+    "createdAt": 1792096952806
+  },
+  "network": {
+    "hostname": "ws-vpn-diag-origin-afef41e.vercel.app",
+    "port": 443,
+    "utc": "2026-10-15T20:41:56.464403+00:00",
+    "resolved_addresses": [
+      "216.198.79.67",
+      "64.29.17.67"
+    ],
+    "networks": [
+      {
+        "ip": "216.198.79.67",
+        "public": true,
+        "cloudflare": false,
+        "registered_network": {
+          "name": "VERCEL-05",
+          "handle": "NET-216-198-79-0-1",
+          "startAddress": "216.198.79.0",
+          "endAddress": "216.198.79.255",
+          "country": null
+        },
+        "announced_prefix": "216.198.79.0/24",
+        "as_holders": [
+          {
+            "asn": "16509",
+            "holder": "AMAZON-02 - Amazon.com, Inc."
+          }
+        ],
+        "sources": [
+          "https://rdap.arin.net/registry/ip/216.198.79.67",
+          "https://stat.ripe.net/data/network-info/data.json?resource=216.198.79.67"
+        ]
+      },
+      {
+        "ip": "64.29.17.67",
+        "public": true,
+        "cloudflare": false,
+        "registered_network": {
+          "name": "VERCEL-12",
+          "handle": "NET-64-29-17-0-1",
+          "startAddress": "64.29.17.0",
+          "endAddress": "64.29.17.255",
+          "country": null
+        },
+        "announced_prefix": "64.29.17.0/24",
+        "as_holders": [
+          {
+            "asn": "16509",
+            "holder": "AMAZON-02 - Amazon.com, Inc."
+          }
+        ],
+        "sources": [
+          "https://rdap.arin.net/registry/ip/64.29.17.67",
+          "https://stat.ripe.net/data/network-info/data.json?resource=64.29.17.67"
+        ]
+      }
+    ],
+    "cloudflare_ranges_source": "https://api.cloudflare.com/client/v4/ips",
+    "eligible_by_public_address_and_ownership": true,
+    "workers_raw_tcp_reachability_tested": false
+  },
+  "client_results": {
+    "kind": "independent-origin-only-no-worker",
+    "host": "ws-vpn-diag-origin-afef41e.vercel.app",
+    "ip": "64.29.17.67",
+    "port": 443,
+    "requests": [
+      {
+        "id": "c45bfb3184030e2bad9d77672909f356",
+        "mode": "ok",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 5,
+        "http_status": 400,
+        "reads": [
+          {
+            "elapsed_ms": 922.273,
+            "bytes": 369
+          },
+          {
+            "elapsed_ms": 922.33,
+            "bytes": 5
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "64.29.17.67",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 329.028,
+        "end": "SSLEOFError",
+        "phase_at_end": "response",
+        "elapsed_ms": 922.576,
+        "echo_id_matches": false,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": false,
+        "transfer_encoding_present": true,
+        "first_body_ms": 922.33,
+        "http_bytes": 374
+      },
+      {
+        "id": "32b0df761f88597e1adf41e09204ae17",
+        "mode": "ok",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 5,
+        "http_status": 400,
+        "reads": [
+          {
+            "elapsed_ms": 1266.034,
+            "bytes": 369
+          },
+          {
+            "elapsed_ms": 1266.96,
+            "bytes": 5
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "64.29.17.67",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 368.111,
+        "end": "SSLEOFError",
+        "phase_at_end": "response",
+        "elapsed_ms": 1270.896,
+        "echo_id_matches": false,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": false,
+        "transfer_encoding_present": true,
+        "first_body_ms": 1266.96,
+        "http_bytes": 374
+      },
+      {
+        "id": "cb6dffc40690d89a1c04401914562c48",
+        "mode": "ok",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 5,
+        "http_status": 400,
+        "reads": [
+          {
+            "elapsed_ms": 699.036,
+            "bytes": 369
+          },
+          {
+            "elapsed_ms": 699.08,
+            "bytes": 5
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "64.29.17.67",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 248.027,
+        "end": "SSLEOFError",
+        "phase_at_end": "response",
+        "elapsed_ms": 700.375,
+        "echo_id_matches": false,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": false,
+        "transfer_encoding_present": true,
+        "first_body_ms": 699.08,
+        "http_bytes": 374
+      },
+      {
+        "id": "8632d686fb7e88effd05435de1a7d891",
+        "mode": "stall-response",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 5,
+        "http_status": 400,
+        "reads": [
+          {
+            "elapsed_ms": 687.286,
+            "bytes": 369
+          },
+          {
+            "elapsed_ms": 688.401,
+            "bytes": 5
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "64.29.17.67",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 263.957,
+        "end": "SSLEOFError",
+        "phase_at_end": "response",
+        "elapsed_ms": 692.048,
+        "echo_id_matches": false,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": false,
+        "transfer_encoding_present": true,
+        "first_body_ms": 688.401,
+        "http_bytes": 374
+      },
+      {
+        "id": "754e264ec5e3bdda905acca1c0c7230c",
+        "mode": "stall-body",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 5,
+        "http_status": 400,
+        "reads": [
+          {
+            "elapsed_ms": 1017.832,
+            "bytes": 369
+          },
+          {
+            "elapsed_ms": 1017.873,
+            "bytes": 5
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "64.29.17.67",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 252.092,
+        "end": "SSLEOFError",
+        "phase_at_end": "response",
+        "elapsed_ms": 1018.098,
+        "echo_id_matches": false,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": false,
+        "transfer_encoding_present": true,
+        "first_body_ms": 1017.873,
+        "http_bytes": 374
+      },
+      {
+        "id": "81877fd344400925f73b6a2d05434813",
+        "mode": "ok",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 5,
+        "http_status": 400,
+        "reads": [
+          {
+            "elapsed_ms": 750.338,
+            "bytes": 369
+          },
+          {
+            "elapsed_ms": 753.399,
+            "bytes": 5
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "64.29.17.67",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 268.044,
+        "end": "SSLEOFError",
+        "phase_at_end": "response",
+        "elapsed_ms": 754.565,
+        "echo_id_matches": false,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": false,
+        "transfer_encoding_present": true,
+        "first_body_ms": 753.399,
+        "http_bytes": 374
+      },
+      {
+        "id": "c9f79849377dc8000b73e9640b5fae27",
+        "mode": "ok",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 5,
+        "http_status": 400,
+        "reads": [
+          {
+            "elapsed_ms": 736.49,
+            "bytes": 369
+          },
+          {
+            "elapsed_ms": 736.533,
+            "bytes": 5
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "64.29.17.67",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 273.338,
+        "end": "SSLEOFError",
+        "phase_at_end": "response",
+        "elapsed_ms": 737.677,
+        "echo_id_matches": false,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": false,
+        "transfer_encoding_present": true,
+        "first_body_ms": 736.533,
+        "http_bytes": 374
+      }
+    ],
+    "all_client_controls_passed": false,
+    "origin_logs_correlation_required": true,
+    "workers_reachability_tested": false
+  },
+  "client_result_field_caveat": "For rejected chunked replies, body_bytes is the raw post-header wire count, not decoded payload bytes. It must not be reported as verified synthetic data.",
+  "verified_synthetic_payload_bytes": 0,
+  "summary": {
+    "synthetic_requests": 7,
+    "tls_verified": 7,
+    "http_400": 7,
+    "functional_controls_passed": 0,
+    "http_wire_bytes_per_response": 374,
+    "selected_pinned_ip": "64.29.17.67",
+    "no_retry_or_warmup_requests": true
+  },
+  "origin_runtime_capture": {
+    "kind": "sanitized-vercel-origin-only-runtime-query",
+    "deployment": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+    "cli_exit_code": 0,
+    "summary": {
+      "records_returned": 0,
+      "has_more": false,
+      "excluded_intervals_present": false
+    },
+    "events": [],
+    "sessions": [
+      {
+        "id": "c9f79849377dc8000b73e9640b5fae27",
+        "events": 0,
+        "receipts": 0,
+        "write_complete_bytes": 0,
+        "deadline_events": 0,
+        "finish_events": 0
+      },
+      {
+        "id": "754e264ec5e3bdda905acca1c0c7230c",
+        "events": 0,
+        "receipts": 0,
+        "write_complete_bytes": 0,
+        "deadline_events": 0,
+        "finish_events": 0
+      },
+      {
+        "id": "81877fd344400925f73b6a2d05434813",
+        "events": 0,
+        "receipts": 0,
+        "write_complete_bytes": 0,
+        "deadline_events": 0,
+        "finish_events": 0
+      },
+      {
+        "id": "32b0df761f88597e1adf41e09204ae17",
+        "events": 0,
+        "receipts": 0,
+        "write_complete_bytes": 0,
+        "deadline_events": 0,
+        "finish_events": 0
+      },
+      {
+        "id": "c45bfb3184030e2bad9d77672909f356",
+        "events": 0,
+        "receipts": 0,
+        "write_complete_bytes": 0,
+        "deadline_events": 0,
+        "finish_events": 0
+      },
+      {
+        "id": "cb6dffc40690d89a1c04401914562c48",
+        "events": 0,
+        "receipts": 0,
+        "write_complete_bytes": 0,
+        "deadline_events": 0,
+        "finish_events": 0
+      },
+      {
+        "id": "8632d686fb7e88effd05435de1a7d891",
+        "events": 0,
+        "receipts": 0,
+        "write_complete_bytes": 0,
+        "deadline_events": 0,
+        "finish_events": 0
+      }
+    ],
+    "raw_platform_logs_saved": false,
+    "worker_tail_used": false
+  },
+  "cdn_metadata": {
+    "summary": {
+      "records_returned": 12,
+      "has_more": false,
+      "excluded_intervals_present": false
+    },
+    "synthetic_requests": [
+      {
+        "timestamp": "2026-10-15T20:43:55.421Z",
+        "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+        "requestId": "f4dmq-1792097035421-116954846ab7",
+        "deploymentId": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "requestPath": "/_wsvpn_diag/ok",
+        "requestMethod": "GET",
+        "httpStatus": 400,
+        "route": "/api/origin",
+        "cacheResult": "MISS"
+      },
+      {
+        "timestamp": "2026-10-15T20:43:55.410Z",
+        "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+        "requestId": "v2nkb-1792097035410-1b0950b699b4",
+        "deploymentId": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "requestPath": "/_wsvpn_diag/ok",
+        "requestMethod": "GET",
+        "httpStatus": 400,
+        "route": "/api/origin",
+        "cacheResult": "MISS"
+      },
+      {
+        "timestamp": "2026-10-15T20:43:54.351Z",
+        "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+        "requestId": "n7428-1792097034351-3927e5d96906",
+        "deploymentId": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "requestPath": "/_wsvpn_diag/stall-body",
+        "requestMethod": "GET",
+        "httpStatus": 400,
+        "route": "/api/origin",
+        "cacheResult": "MISS"
+      },
+      {
+        "timestamp": "2026-10-15T20:43:53.652Z",
+        "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+        "requestId": "dwm22-1792097033652-4489f1998d1f",
+        "deploymentId": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "requestPath": "/_wsvpn_diag/stall-response",
+        "requestMethod": "GET",
+        "httpStatus": 400,
+        "route": "/api/origin",
+        "cacheResult": "MISS"
+      },
+      {
+        "timestamp": "2026-10-15T20:43:52.949Z",
+        "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+        "requestId": "gvvsp-1792097032949-f1a70742e342",
+        "deploymentId": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "requestPath": "/_wsvpn_diag/ok",
+        "requestMethod": "GET",
+        "httpStatus": 400,
+        "route": "/api/origin",
+        "cacheResult": "MISS"
+      },
+      {
+        "timestamp": "2026-10-15T20:43:51.810Z",
+        "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+        "requestId": "wxdlk-1792097031810-fc936509f69a",
+        "deploymentId": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "requestPath": "/_wsvpn_diag/ok",
+        "requestMethod": "GET",
+        "httpStatus": 400,
+        "route": "/api/origin",
+        "cacheResult": "MISS"
+      },
+      {
+        "timestamp": "2026-10-15T20:43:50.911Z",
+        "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+        "requestId": "6sm6j-1792097030911-71bff84a3bfa",
+        "deploymentId": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "requestPath": "/_wsvpn_diag/ok",
+        "requestMethod": "GET",
+        "httpStatus": 400,
+        "route": "/api/origin",
+        "cacheResult": "MISS"
+      }
+    ],
+    "other_earlier_non_diagnostic_404_records": 5,
+    "other_records_attributed_to_actor": false,
+    "raw_logs_saved": false
+  },
+  "staging": {
+    "kind": "origin-only-no-worker",
+    "files": {
+      "api/origin.mjs": "7d63ffbfd4ad635e338d6a4c95709dcbefa199d7206fccd5f21f301348744b3b",
+      "package.json": "1dbca79e27224b7706651a436fec24c87b418f47c288fefa9ab36bf0d2a233ce",
+      "vercel.json": "b9e9bd6160a06cef3996af0acf35aef9f71138bfc4d7c4f7ceff9161d0363538",
+      "experiment.json": "9223ec09e18ff9d61f7fb84f434ea60f5650a931bcc59a8af2923c5705a30c19"
+    },
+    "requests": 7,
+    "expires_ms": 1792098151233
+  },
+  "final_project_state": {
+    "projectId": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+    "name": "ws-vpn-diag-origin-afef41e",
+    "teamId": "team_rGnSqY0IkqM6gracJSAOzW50",
+    "plan": "hobby",
+    "ownerRole": "OWNER",
+    "nodeVersion": "24.x",
+    "ssoProtection": {
+      "deploymentType": "all"
+    },
+    "envCount": 0,
+    "sharedEnvCount": 0,
+    "gitLinkPresent": false,
+    "verifiedUtc": "2026-10-15T20:48:17.9150850Z",
+    "originPublicAccess": "protected after failed test; API readback verified; no extra HTTP request"
+  },
+  "bounded_diagnosis": {
+    "observed_boundary": "Strict TLS succeeds; CDN maps all seven diagnostic GET requests to /api/origin and returns HTTP 400 before any accepted-session marker is observed.",
+    "specific_rejection_predicate": "UNRESOLVED",
+    "function_invocation_proven_by_origin_counters": false,
+    "absence_of_marker_proves_no_invocation": false,
+    "adapter_validation_suspected_not_confirmed": true,
+    "vercel_intrinsic_streaming_limitation_proven": false,
+    "no_speculative_forwarding_fix": true
+  },
+  "remaining_validation": {
+    "successful_180000_byte_responses": false,
+    "correlation_id_echo": false,
+    "controlled_stall_behavior": false,
+    "hosted_response_buffering_characterized": false,
+    "cold_start_cause_established": false,
+    "function_receipt_vs_response_transmission_correlated": false,
+    "actual_workers_raw_tcp_reachability": false
+  },
+  "new_local_validation": {
+    "independent_client_python_linux_tests": {
+      "passed": 2,
+      "failed": 0
+    },
+    "independent_client_python_windows_tests": {
+      "passed": 2,
+      "failed": 0
+    },
+    "ruff_linux": "passed",
+    "node_adapter_tests_not_rerun_after_unchanged_origin_source": true
+  },
+  "preparation_issues_preserved": [
+    "Initial create API rejected nodeVersion field with HTTP 400; exact-project lookup confirmed no project and the supported minimal request then succeeded.",
+    "Windows npx.cmd query ampersand quoting failed; switched to its exact pinned Node CLI entry point.",
+    "PowerShell treated unit-test stderr as NativeCommandError; explicit stdout/stderr process redirection then completed both tests."
+  ],
+  "diagnostic_worker_bundle_sha256": "5095703c896769faab7cd3b90151dbbd217b86b1723086659b83bb6ed3901960",
+  "preserved_rollback_version": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c",
+  "worker_operations_performed": [],
+  "live_worker_tail_started": false,
+  "worker_origin_sessions": 0,
+  "laptop_public_exposure_or_firewall_routing_changes": false,
+  "vpn_or_cloudflare_secrets_uploaded": false,
+  "pr2_draft_required": true,
+  "pr2_head_preserved": "458e87726fb63766cfb9c33ee80b6c1d306519fb",
+  "next_gate": "No Worker authorization requested: current origin fails its controls. Any new public test batch or reactivation requires a separately bounded approval; do not exceed these seven requests."
+}

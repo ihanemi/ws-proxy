@@ -33,13 +33,13 @@ opt-in correlated counters, a synthetic HTTPS origin and local success/stall
 tests. It is **not deployed or a production fix**. The restored legacy Worker
 and PR #2 remain unchanged; live use requires separate approval and an approved
 public origin. Default Worker builds do not include the instrumentation.
-The [public-origin prerequisite assessment](docs/DIAGNOSTIC_ORIGIN_PREREQUISITE.md)
-found no existing authorized host in this project's records/settings. A temporary
-free hosting candidate is proposed, but no public hostname/IP or live synthetic
-verification exists yet. [Origin-only Vercel preparation/testing](docs/VERCEL_ORIGIN_PREPARATION_2026-10-15.md)
-is now authorized and an isolated adapter passes local real HTTPS controls;
-public work awaits secure owner authentication. Exact-origin approval and final
-Worker authorization remain separate gates. No Cloudflare deployment is authorized.
+The [authorized Vercel origin-only trial](docs/VERCEL_ORIGIN_VALIDATION_2026-10-15.md)
+ran seven independent HTTPS requests from Windows. The public non-Cloudflare
+addresses and TLS certificates were verified, but all seven requests returned
+HTTP 400 before accepted-session counters. **The origin is not accepted.** Its
+temporary project was protected after the failed run. The exact rejection cause
+and hosted streaming controls remain unresolved; no Worker session/deployment
+or live Worker tail was performed. PR #2 stays Draft and unmerged.
 
 ## Choose a backend
 
