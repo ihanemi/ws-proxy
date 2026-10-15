@@ -36,3 +36,7 @@ worker/.env*
 worker/diagnostic/build/
 
 /worker/node_modules
+
+# Temporary Vercel origin state belongs in a separate private upload directory.
+worker/diagnostic/vercel/.vercel/
+worker/diagnostic/vercel/experiment.json

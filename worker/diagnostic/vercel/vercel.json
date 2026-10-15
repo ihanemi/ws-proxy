@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "",
+  "functions": {
+    "api/origin.mjs": {
+      "maxDuration": 15,
+      "includeFiles": "experiment.json"
+    }
+  },
+  "rewrites": [
+    { "source": "/_wsvpn_diag/:mode", "destination": "/api/origin?mode=:mode" }
+  ]
+}
