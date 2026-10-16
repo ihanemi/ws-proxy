@@ -51,12 +51,12 @@ class IndependentOriginTests(unittest.TestCase):
             rows = VERIFY.run_matrix("test.vercel.app", "64.29.17.67", ids, bypass_secret=secret)
         self.assertEqual(run.call_count, 7)
         self.assertEqual(peak, 2)
-        self.assertEqual(calls[:5], list(zip(ids[:5], ["ok", "ok", "ok", "stall-response", "stall-body"])))
+        self.assertEqual(calls[:5], list(zip(ids[:5], ["ok", "ok", "ok", "stall-response", "stall-body"], strict=True)))
         self.assertEqual(set(calls[5:]), {(identifier, "ok") for identifier in ids[5:]})
         self.assertEqual([row["id"] for row in rows], ids)
         self.assertEqual(sum(row["passed"] for row in rows), 5)
         self.assertNotIn(secret, json.dumps(rows))
-        for previous, current in zip(rows[:5], rows[1:5]):
+        for previous, current in zip(rows[:4], rows[1:5], strict=True):
             self.assertLessEqual(previous["matrix_finished_ms"], current["matrix_started_ms"])
         self.assertLessEqual(max(rows[5]["matrix_started_ms"], rows[6]["matrix_started_ms"]),
                              min(rows[5]["matrix_finished_ms"], rows[6]["matrix_finished_ms"]))
