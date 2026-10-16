@@ -1,0 +1,230 @@
+{
+  "kind": "authorized-single-origin-canary-blocked-before-deployment",
+  "approved_source": "78d5f46f100d8430abbb625f88763f5255e69099",
+  "outcome": "not_run_independent_cleanup_unverified",
+  "gate": "Reliable independently enforceable cleanup before public access; not verified with available laptop-only execution",
+  "available_executor": {
+    "device": "AH",
+    "device_count": 1,
+    "independent_failure_domain_verified": false
+  },
+  "control_plane_reads": 10,
+  "origin_https_requests": 0,
+  "origin_public_exposure_seconds": 0,
+  "deployment_writes": 0,
+  "project_configuration_writes": 0,
+  "cloudflare_operations": 0,
+  "preflight": {
+    "kind": "read-only-vercel-origin-canary-preflight",
+    "verified_utc": "2026-10-16T08:21:54.292582+00:00",
+    "source_commit": "78d5f46f100d8430abbb625f88763f5255e69099",
+    "user": {
+      "id": "LBDE7wqDFWomctJb4Yi6P9pY",
+      "username": "ihanemi"
+    },
+    "team": {
+      "id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "slug": "hanemi",
+      "name": "Hanemi",
+      "plan": "hobby",
+      "role": "OWNER",
+      "creator_matches_user": true
+    },
+    "project": {
+      "id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "name": "ws-vpn-diag-origin-afef41e",
+      "account_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "node_version": "24.x",
+      "protection": {
+        "deploymentType": "all"
+      },
+      "environment_count": 0,
+      "shared_environment_count": 0,
+      "git_link_present": false,
+      "production_target_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "production_target_url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+      "safe_configuration": {
+        "accountId": "team_rGnSqY0IkqM6gracJSAOzW50",
+        "name": "ws-vpn-diag-origin-afef41e",
+        "nodeVersion": "24.x",
+        "framework": null,
+        "buildCommand": null,
+        "installCommand": null,
+        "outputDirectory": null,
+        "rootDirectory": null,
+        "devCommand": null,
+        "ssoProtection": {
+          "deploymentType": "all"
+        },
+        "autoExposeSystemEnvs": true,
+        "directoryListing": false,
+        "resourceConfig": {
+          "fluid": true,
+          "functionDefaultRegions": [
+            "iad1"
+          ],
+          "buildMachineType": "basic",
+          "buildMachineSelection": "fixed"
+        }
+      }
+    },
+    "alias": {
+      "hostname": "ws-vpn-diag-origin-afef41e.vercel.app",
+      "id": "76e07a3f147226b4fe640c2ff5a79ecaf9264f79277e8946264fcad18b79cc64cc71572f3aab3add8ec425b5d93a2c0860f694026e05908d92989565867fc577",
+      "deployment_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "deployment_url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "team_id": null
+    },
+    "preserved_deployment": {
+      "id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "owner_team_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "ready_state": "READY",
+      "target": "production",
+      "aliases": [
+        "ws-vpn-diag-origin-afef41e.vercel.app",
+        "ws-vpn-diag-origin-afef41e-hanemi.vercel.app"
+      ],
+      "node_version": "24.x"
+    },
+    "public_requests": 0,
+    "deployment_writes": 0,
+    "configuration_writes": 0,
+    "checks": {
+      "owner": true,
+      "scope": true,
+      "free_owner": true,
+      "project": true,
+      "protected": true,
+      "original_deployment": true,
+      "alias_preserved": true,
+      "production_target_preserved": true,
+      "no_environment_or_git_link": true
+    },
+    "all_preflight_checks_passed": true
+  },
+  "final_fresh_read": {
+    "kind": "read-only-vercel-origin-canary-preflight",
+    "verified_utc": "2026-10-16T08:23:52.149968+00:00",
+    "source_commit": "78d5f46f100d8430abbb625f88763f5255e69099",
+    "user": {
+      "id": "LBDE7wqDFWomctJb4Yi6P9pY",
+      "username": "ihanemi"
+    },
+    "team": {
+      "id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "slug": "hanemi",
+      "name": "Hanemi",
+      "plan": "hobby",
+      "role": "OWNER",
+      "creator_matches_user": true
+    },
+    "project": {
+      "id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "name": "ws-vpn-diag-origin-afef41e",
+      "account_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "node_version": "24.x",
+      "protection": {
+        "deploymentType": "all"
+      },
+      "environment_count": 0,
+      "shared_environment_count": 0,
+      "git_link_present": false,
+      "production_target_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "production_target_url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+      "safe_configuration": {
+        "accountId": "team_rGnSqY0IkqM6gracJSAOzW50",
+        "name": "ws-vpn-diag-origin-afef41e",
+        "nodeVersion": "24.x",
+        "framework": null,
+        "buildCommand": null,
+        "installCommand": null,
+        "outputDirectory": null,
+        "rootDirectory": null,
+        "devCommand": null,
+        "ssoProtection": {
+          "deploymentType": "all"
+        },
+        "autoExposeSystemEnvs": true,
+        "directoryListing": false,
+        "resourceConfig": {
+          "fluid": true,
+          "functionDefaultRegions": [
+            "iad1"
+          ],
+          "buildMachineType": "basic",
+          "buildMachineSelection": "fixed"
+        }
+      }
+    },
+    "alias": {
+      "hostname": "ws-vpn-diag-origin-afef41e.vercel.app",
+      "id": "76e07a3f147226b4fe640c2ff5a79ecaf9264f79277e8946264fcad18b79cc64cc71572f3aab3add8ec425b5d93a2c0860f694026e05908d92989565867fc577",
+      "deployment_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "deployment_url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "team_id": null
+    },
+    "preserved_deployment": {
+      "id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "owner_team_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "ready_state": "READY",
+      "target": "production",
+      "aliases": [
+        "ws-vpn-diag-origin-afef41e.vercel.app",
+        "ws-vpn-diag-origin-afef41e-hanemi.vercel.app"
+      ],
+      "node_version": "24.x"
+    },
+    "public_requests": 0,
+    "deployment_writes": 0,
+    "configuration_writes": 0,
+    "checks": {
+      "owner": true,
+      "scope": true,
+      "free_owner": true,
+      "project": true,
+      "protected": true,
+      "original_deployment": true,
+      "alias_preserved": true,
+      "production_target_preserved": true,
+      "no_environment_or_git_link": true
+    },
+    "all_preflight_checks_passed": true
+  },
+  "compared_snapshot_keys": [
+    "user",
+    "team",
+    "project",
+    "alias",
+    "preserved_deployment"
+  ],
+  "compared_values_identical": true,
+  "stage_verification": {
+    "verifiedUtc": "2026-10-16T08:24:14.9082069Z",
+    "source": "78d5f46",
+    "filesVerified": 4,
+    "manifestMatches": true,
+    "idCount": 1,
+    "idDiffersFromPreviousSeven": true,
+    "publicRequests": 0,
+    "uploaded": false,
+    "expiresMs": 1792140175867
+  },
+  "staged_files_sha256": {
+    "api/origin.mjs": "3dd92ed2b4c6842e2f42ae26cc4417c518d792e5f8b4f76e55b699a969d8820a",
+    "package.json": "1dbca79e27224b7706651a436fec24c87b418f47c288fefa9ab36bf0d2a233ce",
+    "vercel.json": "b9e9bd6160a06cef3996af0acf35aef9f71138bfc4d7c4f7ceff9161d0363538",
+    "experiment.json": "3d6c78fcba5ec729ce7a42652103268f1a33ad6d5d1210fced97919200acfed9"
+  },
+  "network_and_tls_preflight": "Not attempted: deployment/exposure gate failed; no public origin request permitted without cleanup",
+  "canary_functional_result": "unverified",
+  "rollback_result": "not_needed_no_mutation",
+  "credentials_uploaded": false,
+  "raw_origin_logs_collected": false,
+  "worker_rollback_preserved": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c"
+}

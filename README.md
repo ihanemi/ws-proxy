@@ -46,7 +46,12 @@ form and exposes capped, predefined rejection codes without logging raw requests
 All 38 Node tests and 4 verifier tests passed on both Linux and Windows, including
 full 180,000-byte local HTTPS responses and intentional 10-second stalls through
 the rewrite. These are local results; the correction has **not been deployed**.
-One fresh-ID origin-only canary is prepared and requires separate approval.
+One fresh-ID origin-only canary was subsequently authorized, but the
+[execution gate stopped it before deployment](docs/VERCEL_CANARY_GATE_2026-10-16.md):
+cleanup independent of the laptop could not be assured. Fresh API reads verified
+Hobby ownership, protection of all deployments and the unchanged original
+deployment/alias. Four allowlisted files were staged locally; no public canary
+request was sent. Hosted acceptance remains unverified.
 No new public requests, Worker session/deployment or live Worker tail occurred.
 PR #2 stays Draft and unmerged.
 
