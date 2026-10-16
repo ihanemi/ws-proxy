@@ -38,8 +38,17 @@ ran seven independent HTTPS requests from Windows. The public non-Cloudflare
 addresses and TLS certificates were verified, but all seven requests returned
 HTTP 400 before accepted-session counters. **The origin is not accepted.** Its
 temporary project was protected after the failed run. The exact rejection cause
-and hosted streaming controls remain unresolved; no Worker session/deployment
-or live Worker tail was performed. PR #2 stays Draft and unmerged.
+of those seven hosted replies and hosted streaming controls remain unresolved.
+A [bounded local follow-up](docs/VERCEL_ORIGIN_REJECTION_DIAGNOSIS_2026-10-16.md)
+confirmed and corrected a routing compatibility defect: the adapter rejected
+Vercel CLI's original pathname plus matching rewrite query. It now accepts that
+form and exposes capped, predefined rejection codes without logging raw requests.
+All 38 Node tests and 4 verifier tests passed on both Linux and Windows, including
+full 180,000-byte local HTTPS responses and intentional 10-second stalls through
+the rewrite. These are local results; the correction has **not been deployed**.
+One fresh-ID origin-only canary is prepared and requires separate approval.
+No new public requests, Worker session/deployment or live Worker tail occurred.
+PR #2 stays Draft and unmerged.
 
 ## Choose a backend
 
@@ -130,6 +139,7 @@ there is no Android APK yet.
 
 ## Documentation
 
+- [Vercel rejection diagnosis, local correction and proposed single-request canary](docs/VERCEL_ORIGIN_REJECTION_DIAGNOSIS_2026-10-16.md)
 - [Latest bounded transport diagnosis and real TCP/HTTPS tests](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md)
 - [Approved PR #2 deployment, failed live tests and verified version rollback](docs/PR2_LIVE_VALIDATION_2026-10-15.md)
 - [Complete Windows client manual](README.vpn.md)

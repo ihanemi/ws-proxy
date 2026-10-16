@@ -1,0 +1,55 @@
+{
+  "kind": "offline-origin-rejection-correction-validation",
+  "date_utc": "2026-10-16",
+  "baseline_commit": "dc81589d236c39bbff4166e4ac5d906827541075",
+  "implementation_commit": "5b7823b21ae34bfa52af3e84f82f51d435666ea1",
+  "linux": {
+    "node": "24.19.0",
+    "adapter_tests": { "passed": 7, "failed": 0, "skipped": 0, "exit_code": 0 },
+    "full_node_suite": {
+      "passed": 38, "failed": 0, "skipped": 0, "exit_code": 0,
+      "duration_ms": 23467.745397,
+      "tap_sha256": "4dc77e59039b89a15f2879493187f413254664b6d516f306359f2602ac6501a6"
+    },
+    "python_verifier": { "passed": 4, "failed": 0, "exit_code": 0 },
+    "ruff_changed_python_files": "passed",
+    "diff_check": "passed"
+  },
+  "windows_laptop": {
+    "node": "24.19.0",
+    "full_node_suite": {
+      "passed": 38, "failed": 0, "skipped": 0, "exit_code": 0,
+      "duration_ms": 25521.3195,
+      "tap_sha256": "e1bbcaa89382e8d0e548f0ae392a76ad5e27651c3a94e996aee25411b2d98e91"
+    },
+    "python_verifier": {
+      "passed": 4, "failed": 0, "exit_code": 0,
+      "duration_seconds": 1.084,
+      "log_sha256": "d10b9f20e3bc02e9720a9f32764241124aae07054fed46b9e1b4ab29745748e8"
+    },
+    "initial_wrapper": "Complete 38-pass TAP; Node ExitCode property was lost; wrapper raised error. Synchronous final run above verified exit 0. Both logs retained."
+  },
+  "local_https_controls": {
+    "routing": "original-path-plus-rewrite-query using pinned CLI URL transformation",
+    "healthy_responses": 5,
+    "verified_bytes_each": 180000,
+    "concurrent_healthy_responses": 2,
+    "stall_response_http_bytes": 0,
+    "stall_body_payload_bytes": 1024,
+    "asserted_stall_ms": [9800, 12000],
+    "partial_arrival_before_close_min_ms": 5000,
+    "id_echo_and_event_counts": "passed"
+  },
+  "confirmed_local_defect": "modeFor rejected original diagnostic pathname with exactly matching mode query",
+  "historical_hosted_400_cause": "unproven: incoming runtime URL/framing not captured",
+  "new_public_requests": 0,
+  "expired_live_ids_reused": false,
+  "vercel_deployments_or_reactivations": 0,
+  "cloudflare_operations": 0,
+  "vpn_routing_or_firewall_changes": 0,
+  "public_worker_reachability_tested": false,
+  "hosted_streaming_controls_verified": false,
+  "pr2_state_preserved": "Draft, unmerged, head 458e877",
+  "worker_rollback_preserved": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c",
+  "diagnostic_worker_bundle_sha256_preserved": "5095703c896769faab7cd3b90151dbbd217b86b1723086659b83bb6ed3901960"
+}
