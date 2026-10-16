@@ -3,6 +3,10 @@ import { readFile } from "node:fs/promises";
 // Intentionally self-contained: deploy only the staged origin, never the VPN repo.
 export const ID_HEADER = "X-WSVPN-Diagnostic-ID";
 export const BODY_BYTES = 180000;
+export const SOURCE_HEADER = "X-WSVPN-Origin-Source";
+export const SOURCE_MARKER = "wsvpn-origin/2";
+export const REJECTION_HEADER = "X-WSVPN-Origin-Rejection";
+export const REJECTION_LOG_LIMIT = 24; // Per warm instance, not a global serverless quota.
 const VALID_ID = /^[0-9a-f]{32}$/;
 const MODES = new Set(["ok", "stall-response", "stall-body"]);
 const BODY = Buffer.alloc(BODY_BYTES, 65);
@@ -21,10 +25,11 @@ function modeFor(url) {
     const parsed = new URL(url, "https://diagnostic.invalid");
     const direct = /^\/_wsvpn_diag\/(ok|stall-response|stall-body)$/.exec(parsed.pathname);
     if (direct && !parsed.search) return direct[1];
-    // Vercel's static rewrite adds only this fixed mode parameter.
+    // Vercel CLI preserves the original pathname and adds the rewrite query.
+    // Also retain the internal destination form used by other runtime bridges.
     const entries = [...parsed.searchParams];
-    if (parsed.pathname === "/api/origin" && entries.length === 1 && entries[0][0] === "mode" &&
-        MODES.has(entries[0][1])) return entries[0][1];
+    if (entries.length === 1 && entries[0][0] === "mode" && MODES.has(entries[0][1]) &&
+        (parsed.pathname === "/api/origin" || direct?.[1] === entries[0][1])) return entries[0][1];
   } catch {}
   return null;
 }
@@ -35,20 +40,37 @@ export function createOrigin(experiment, { emit = row => console.log(JSON.string
   if (!(stallMs > 0 && stallMs <= 10000)) throw new Error("Invalid stall limit");
   // Not a global serverless quota: admission uses fixed IDs and an absolute expiry.
   const seen = new Set();
+  let rejectionLogs = 0;
   return async function origin(req, res) {
+    res.setHeader(SOURCE_HEADER, SOURCE_MARKER);
     res.setHeader("Cache-Control", "no-store, no-transform, max-age=0");
     res.setHeader("CDN-Cache-Control", "no-store");
     res.setHeader("Vercel-CDN-Cache-Control", "no-store");
     const id = req.headers[ID_HEADER.toLowerCase()], mode = modeFor(req.url);
     const time = now();
-    if (req.method !== "GET" || typeof id !== "string" || !VALID_ID.test(id) || !mode ||
-        req.headers["transfer-encoding"] || (req.headers["content-length"] && req.headers["content-length"] !== "0")) {
-      res.writeHead(400); res.end(); return;
-    }
+    const validId = typeof id === "string" && VALID_ID.test(id);
+    const active = time >= limits.notBefore && time < limits.expires;
+    const reject = (status, reasons) => {
+      res.setHeader(REJECTION_HEADER, reasons[0]);
+      if (rejectionLogs < REJECTION_LOG_LIMIT) {
+        rejectionLogs++;
+        try { emit({ schema: "wsvpn-origin-rejection/1", reasons,
+          id: validId && active && limits.ids.has(id) ? id : null }); } catch {}
+      }
+      res.writeHead(status); res.end();
+    };
+    // Values are fixed reason codes only. Never include raw request fields.
+    const reasons = [];
+    if (req.method !== "GET") reasons.push("method");
+    if (!validId) reasons.push("diagnostic_id");
+    if (!mode) reasons.push("mode_url");
+    if (req.headers["transfer-encoding"]) reasons.push("transfer_encoding");
+    if (req.headers["content-length"] && req.headers["content-length"] !== "0") reasons.push("content_length");
+    if (reasons.length) { reject(400, reasons); return; }
     if (time < limits.notBefore || time >= limits.expires || !limits.ids.has(id)) {
-      res.writeHead(403); res.end(); return;
+      reject(403, [!active ? "inactive" : "unlisted_id"]); return;
     }
-    if (seen.has(id)) { res.writeHead(409); res.end(); return; }
+    if (seen.has(id)) { reject(409, ["duplicate_id"]); return; }
     seen.add(id);
     let seq = 0, acceptedBytes = 0, finished = false, intentional = false;
     const started = now();
@@ -105,6 +127,8 @@ export default async function origin(req, res) {
       .then(text => createOrigin(JSON.parse(text)));
     run = await handler;
   } catch {
+    res.setHeader(SOURCE_HEADER, SOURCE_MARKER);
+    res.setHeader(REJECTION_HEADER, "configuration");
     res.setHeader("Cache-Control", "no-store"); res.writeHead(503); res.end(); return;
   }
   await run(req, res);

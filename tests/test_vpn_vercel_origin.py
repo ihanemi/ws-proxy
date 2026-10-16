@@ -1,12 +1,15 @@
 from concurrent.futures import ThreadPoolExecutor
 import importlib.util
+import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import ssl
 import shutil
 import subprocess
 import tempfile
+import time
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("verify_vercel_origin", ROOT / "scripts/verify_vercel_origin.py")
@@ -21,6 +24,41 @@ def response(body, extra=b""):
 
 
 class IndependentOriginTests(unittest.TestCase):
+    def test_canary_cli_sends_exactly_one_request_without_retries(self):
+        with tempfile.TemporaryDirectory(prefix="wsvpn-canary-cli-") as directory:
+            root = Path(directory)
+            config, ranges, output = root / "experiment.json", root / "ranges.json", root / "result.json"
+            now = int(time.time() * 1000)
+            config.write_text(json.dumps({"ids": [IDENTIFIER], "not_before_ms": now - 1000,
+                                          "expires_ms": now + 120000}), encoding="utf-8")
+            ranges.write_text(json.dumps({"result": {"ipv4_cidrs": ["104.16.0.0/13"],
+                                                     "ipv6_cidrs": ["2606:4700::/32"]}}), encoding="utf-8")
+            argv = ["verify_vercel_origin.py", "--host", "test.vercel.app", "--ip", "64.29.17.67",
+                    "--experiment", str(config), "--cloudflare-ranges", str(ranges),
+                    "--output", str(output), "--canary"]
+            with patch("sys.argv", argv), patch.object(VERIFY, "run_case", return_value={"passed": True}) as run:
+                with patch("builtins.print"):
+                    self.assertEqual(VERIFY.main(), 0)
+                run.assert_called_once_with("test.vercel.app", "64.29.17.67", IDENTIFIER, "ok")
+            self.assertEqual(len(json.loads(output.read_text(encoding="utf-8"))["requests"]), 1)
+
+    def test_rejection_diagnostics_are_allowlisted_and_wire_bytes_are_not_payload(self):
+        wire = (b"HTTP/1.1 400 Bad Request\r\nTransfer-Encoding: chunked\r\n"
+                b"X-WSVPN-Origin-Source: wsvpn-origin/2\r\n"
+                b"X-WSVPN-Origin-Rejection: mode_url\r\n\r\n0\r\n\r\n")
+        report = {"mode": "ok", "tls_verified": True, "elapsed_ms": 10, "reads": []}
+        self.assertFalse(VERIFY.evaluate(report, wire, IDENTIFIER))
+        self.assertEqual(report["body_wire_bytes"], 5)
+        self.assertIsNone(report["body_bytes"])
+        self.assertTrue(report["origin_source_marker"])
+        self.assertEqual(report["origin_rejection"], "mode_url")
+        untrusted = wire.replace(b"mode_url", b"PRIVATE-secret").replace(b"wsvpn-origin/2", b"PRIVATE")
+        report = {"mode": "ok", "tls_verified": True, "elapsed_ms": 10, "reads": []}
+        self.assertFalse(VERIFY.evaluate(report, untrusted, IDENTIFIER))
+        self.assertIsNone(report["origin_rejection"])
+        self.assertFalse(report["origin_source_marker"])
+        self.assertNotIn("PRIVATE", str(report))
+
     def test_controls_and_proxy_interference(self):
         def check(mode, wire, first=10):
             report = {"mode": mode, "tls_verified": True, "elapsed_ms": 10010,

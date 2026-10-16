@@ -1,0 +1,43 @@
+{
+  "kind": "offline-pinned-vercel-cli-rewrite-replay",
+  "cli_version": "64.2.0",
+  "cli_file_sha256": "ae59b3793c6368348b5406134e53cf958c8c2a5e12e53a40166fe76f3fd8e7d7",
+  "rewrite_block_sha256": "31b32156e2cc2ee481e3972496d44c8b0a0e8b2ea3fea7c76fb1d9caaee8f175",
+  "origin_baseline": "dc81589",
+  "public_requests": 0,
+  "expired_live_ids_used": false,
+  "rows": [
+    {
+      "mode": "ok",
+      "delivered_form": "/_wsvpn_diag/ok?mode=ok",
+      "method_is_get": true,
+      "id_is_expected": true,
+      "content_length_present": false,
+      "transfer_encoding_present": false,
+      "status": 400,
+      "body_bytes": 0
+    },
+    {
+      "mode": "stall-response",
+      "delivered_form": "/_wsvpn_diag/stall-response?mode=stall-response",
+      "method_is_get": true,
+      "id_is_expected": true,
+      "content_length_present": false,
+      "transfer_encoding_present": false,
+      "status": 400,
+      "body_bytes": 0
+    },
+    {
+      "mode": "stall-body",
+      "delivered_form": "/_wsvpn_diag/stall-body?mode=stall-body",
+      "method_is_get": true,
+      "id_is_expected": true,
+      "content_length_present": false,
+      "transfer_encoding_present": false,
+      "status": 400,
+      "body_bytes": 0
+    }
+  ],
+  "accepted_events": 0,
+  "scope_limit": "Local CLI runtime representation is proven; the seven historical hosted request shapes were not captured."
+}
