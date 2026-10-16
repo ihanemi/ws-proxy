@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import ssl
@@ -41,6 +42,16 @@ class IndependentOriginTests(unittest.TestCase):
                     self.assertEqual(VERIFY.main(), 0)
                 run.assert_called_once_with("test.vercel.app", "64.29.17.67", IDENTIFIER, "ok")
             self.assertEqual(len(json.loads(output.read_text(encoding="utf-8"))["requests"]), 1)
+            output.unlink()
+            secret = "local_synthetic_bypass_" + "a" * 32
+            with patch("sys.argv", argv + ["--automation-bypass"]), \
+                    patch.dict(os.environ, {"WSVPN_VERCEL_AUTOMATION_BYPASS": secret}), \
+                    patch.object(VERIFY, "run_case", return_value={"passed": True}) as run:
+                with patch("builtins.print"):
+                    self.assertEqual(VERIFY.main(), 0)
+                run.assert_called_once_with("test.vercel.app", "64.29.17.67", IDENTIFIER, "ok", bypass_secret=secret)
+                self.assertNotIn("WSVPN_VERCEL_AUTOMATION_BYPASS", os.environ)
+            self.assertNotIn(secret, output.read_text(encoding="utf-8"))
 
     def test_rejection_diagnostics_are_allowlisted_and_wire_bytes_are_not_payload(self):
         wire = (b"HTTP/1.1 400 Bad Request\r\nTransfer-Encoding: chunked\r\n"
@@ -58,6 +69,13 @@ class IndependentOriginTests(unittest.TestCase):
         self.assertIsNone(report["origin_rejection"])
         self.assertFalse(report["origin_source_marker"])
         self.assertNotIn("PRIVATE", str(report))
+
+    def test_invalid_bypass_cannot_inject_headers_or_open_a_socket(self):
+        for secret in ("bad\r\nInjected: value", "x" * 257, "short", b"not-text"):
+            with patch.object(VERIFY.socket, "create_connection") as connect:
+                with self.assertRaisesRegex(ValueError, "Invalid automation bypass format"):
+                    VERIFY.run_case("localhost", "127.0.0.1", IDENTIFIER, "ok", bypass_secret=secret)
+                connect.assert_not_called()
 
     def test_controls_and_proxy_interference(self):
         def check(mode, wire, first=10):
@@ -113,12 +131,28 @@ class IndependentOriginTests(unittest.TestCase):
                     self.assertTrue(report["passed"], report)
                     self.assertEqual(report["body_bytes"], 180000)
                     self.assertEqual(report["end"], "complete_body")
+                    secret = "local_synthetic_bypass_" + "a" * 32
+                    # Inspect only a boolean in the fixture, never retain/log header contents.
+                    original = Handler.do_GET
+                    received = []
+
+                    def with_bypass(handler):
+                        received.append(handler.headers.get("x-vercel-protection-bypass") == secret)
+                        self.assertEqual(handler.path, "/_wsvpn_diag/ok")
+                        return original(handler)
+
+                    with patch.object(Handler, "do_GET", with_bypass):
+                        bypassed = VERIFY.run_case("localhost", "127.0.0.1", IDENTIFIER, "ok",
+                                                   context=context, port=server.server_port, bypass_secret=secret)
+                    self.assertEqual(received, [True])
+                    self.assertTrue(bypassed["passed"])
+                    self.assertNotIn(secret, json.dumps(bypassed))
                     wrong = VERIFY.run_case("wrong-host", "127.0.0.1", IDENTIFIER, "ok",
                                             context=context, port=server.server_port)
                     self.assertFalse(wrong["passed"])
                     self.assertFalse(wrong["tls_verified"])
                     self.assertEqual(wrong["end"], "SSLCertVerificationError")
-                    self.assertEqual(seen, [IDENTIFIER])
+                    self.assertEqual(seen, [IDENTIFIER, IDENTIFIER])
                 finally:
                     server.shutdown()
                     server.server_close()

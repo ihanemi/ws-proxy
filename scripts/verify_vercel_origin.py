@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import ipaddress
 import json
+import os
 from pathlib import Path
 import re
 import socket
@@ -77,7 +78,11 @@ def evaluate(report, wire, identifier):
             and report["elapsed_ms"] - report["first_body_ms"] >= 5000)
 
 
-def run_case(host, address, identifier, mode, *, context=None, port=443):
+def run_case(host, address, identifier, mode, *, context=None, port=443, bypass_secret=None):
+    # Header only, never a URL, argv item or report field. Validate before I/O.
+    if bypass_secret is not None and (not isinstance(bypass_secret, str)
+                                      or not re.fullmatch(r"[A-Za-z0-9_-]{16,256}", bypass_secret)):
+        raise ValueError("Invalid automation bypass format")
     started = time.monotonic()
     deadline = started + 12
     report = {"id": identifier, "mode": mode, "passed": False, "tls_verified": False,
@@ -112,8 +117,10 @@ def run_case(host, address, identifier, mode, *, context=None, port=443):
                          "not_before": cert.get("notBefore"), "not_after": cert.get("notAfter")}
         phase = "request"
         sock.settimeout(remaining())
+        bypass_header = "" if bypass_secret is None else f"x-vercel-protection-bypass: {bypass_secret}\r\n"
         sock.sendall((f"GET /_wsvpn_diag/{mode} HTTP/1.1\r\nHost: {host}\r\n"
-                      f"{ID_HEADER}: {identifier}\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n").encode("ascii"))
+                      f"{ID_HEADER}: {identifier}\r\nAccept-Encoding: identity\r\n"
+                      f"{bypass_header}Connection: close\r\n\r\n").encode("ascii"))
         report["request_sent_ms"] = elapsed()
         phase = "response"
         while True:
@@ -153,7 +160,14 @@ def main():
     parser.add_argument("--cloudflare-ranges", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--canary", action="store_true", help="Exactly one fresh-ID ok request; no retries")
+    parser.add_argument("--automation-bypass", action="store_true",
+                        help="Canary only; consume WSVPN_VERCEL_AUTOMATION_BYPASS from the process environment")
     args = parser.parse_args()
+    secret = None
+    if args.automation_bypass:
+        secret = os.environ.pop("WSVPN_VERCEL_AUTOMATION_BYPASS", None)
+        if not args.canary or not secret or not re.fullmatch(r"[A-Za-z0-9_-]{16,256}", secret):
+            parser.error("Automation bypass needs canary mode and a valid process environment secret")
     if not re.fullmatch(r"[a-z0-9][a-z0-9.-]*\.vercel\.app", args.host):
         parser.error("Only the exact reviewed Vercel origin hostname is allowed")
     address = ipaddress.ip_address(args.ip)
@@ -172,7 +186,8 @@ def main():
     if args.output.exists():
         parser.error("Refusing to overwrite evidence")
     if args.canary:
-        results = [run_case(args.host, args.ip, identifiers[0], "ok")]
+        options = {"bypass_secret": secret} if args.automation_bypass else {}
+        results = [run_case(args.host, args.ip, identifiers[0], "ok", **options)]
     else:
         results = [run_case(args.host, args.ip, identifiers[i], mode) for i, mode in enumerate(
             ("ok", "ok", "ok", "stall-response", "stall-body"))]
