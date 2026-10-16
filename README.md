@@ -54,9 +54,16 @@ Vercel Authentication stayed `all`; the dedicated automation bypass was revoked
 and fresh independent API reads verified zero remaining bypasses, the unchanged
 Hobby plan and original production deployment/aliases. Only four origin files
 were deployed to an immutable preview. No origin retry or unauthenticated probe ran.
-This single success does not qualify hosted stalls/concurrency or Worker raw-TCP
-reachability. The seven-request matrix remains unauthorized; no Worker operation
-or live Worker tail occurred.
+The separately authorized [seven-request qualification](docs/VERCEL_PROTECTED_MATRIX_2026-10-16.md)
+then passed all five full-body healthy requests, including two concurrent ones,
+but **failed both stall controls**: the empty stall received HTTP 500, and the
+partial stall delivered no body before timeout despite a 1,024-byte runtime write
+callback. The origin is **not qualified for the complete Worker diagnostic
+experiment**. All seven IDs were correlated; protection remained `all`, the bypass
+was revoked and independent final API reads confirmed zero remaining bypasses
+and unchanged production aliases/configuration/Hobby plan. No retry or further
+batch followed. Worker raw-TCP reachability and the original transport stall remain
+unresolved; no Worker operation or live Worker tail occurred.
 PR #2 stays Draft and unmerged.
 
 ## Choose a backend
@@ -148,6 +155,7 @@ there is no Android APK yet.
 
 ## Documentation
 
+- [Protected seven-request qualification: five passes, two stalled-control failures](docs/VERCEL_PROTECTED_MATRIX_2026-10-16.md)
 - [Successful single protected Vercel canary and verified credential cleanup](docs/VERCEL_PROTECTED_CANARY_2026-10-16.md)
 - [Vercel rejection diagnosis, local correction and proposed single-request canary](docs/VERCEL_ORIGIN_REJECTION_DIAGNOSIS_2026-10-16.md)
 - [Latest bounded transport diagnosis and real TCP/HTTPS tests](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md)

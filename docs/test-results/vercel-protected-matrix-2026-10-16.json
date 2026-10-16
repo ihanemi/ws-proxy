@@ -1,0 +1,1883 @@
+{
+  "kind": "protected-seven-request-origin-qualification",
+  "baseline": "aa8e84e64c97549926e2f0719251ac9839b9b9e4",
+  "runner_commit": "ebae4a7",
+  "test_lint_commit": "af487db",
+  "prepared": {
+    "kind": "protected-preview-prepared-no-origin-request",
+    "adapter_source": "78d5f46",
+    "before": {
+      "utc": "2026-10-16T11:23:31.372159+00:00",
+      "user": "ihanemi",
+      "user_id": "LBDE7wqDFWomctJb4Yi6P9pY",
+      "scope": "hanemi",
+      "team_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "role": "OWNER",
+      "plan": "hobby",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "project_name": "ws-vpn-diag-origin-afef41e",
+      "configuration": {
+        "nodeVersion": "24.x",
+        "framework": null,
+        "buildCommand": null,
+        "installCommand": null,
+        "outputDirectory": null,
+        "rootDirectory": null,
+        "devCommand": null,
+        "ssoProtection": {
+          "deploymentType": "all"
+        },
+        "autoExposeSystemEnvs": true,
+        "directoryListing": false,
+        "resourceConfig": {
+          "fluid": true,
+          "functionDefaultRegions": [
+            "iad1"
+          ],
+          "buildMachineType": "basic",
+          "buildMachineSelection": "fixed"
+        }
+      },
+      "production_target": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "production_alias": "ws-vpn-diag-origin-afef41e.vercel.app",
+      "alias_deployment_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "old_deployment": {
+        "id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+        "aliases": [
+          "ws-vpn-diag-origin-afef41e.vercel.app",
+          "ws-vpn-diag-origin-afef41e-hanemi.vercel.app"
+        ],
+        "state": "READY"
+      },
+      "environment_count": 0,
+      "shared_environment_count": 0,
+      "git_link_present": false,
+      "bypass_secret_count": 0
+    },
+    "after_preview": {
+      "utc": "2026-10-16T11:23:55.766003+00:00",
+      "user": "ihanemi",
+      "user_id": "LBDE7wqDFWomctJb4Yi6P9pY",
+      "scope": "hanemi",
+      "team_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "role": "OWNER",
+      "plan": "hobby",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "project_name": "ws-vpn-diag-origin-afef41e",
+      "configuration": {
+        "nodeVersion": "24.x",
+        "framework": null,
+        "buildCommand": null,
+        "installCommand": null,
+        "outputDirectory": null,
+        "rootDirectory": null,
+        "devCommand": null,
+        "ssoProtection": {
+          "deploymentType": "all"
+        },
+        "autoExposeSystemEnvs": true,
+        "directoryListing": false,
+        "resourceConfig": {
+          "fluid": true,
+          "functionDefaultRegions": [
+            "iad1"
+          ],
+          "buildMachineType": "basic",
+          "buildMachineSelection": "fixed"
+        }
+      },
+      "production_target": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "production_alias": "ws-vpn-diag-origin-afef41e.vercel.app",
+      "alias_deployment_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "old_deployment": {
+        "id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+        "aliases": [
+          "ws-vpn-diag-origin-afef41e.vercel.app",
+          "ws-vpn-diag-origin-afef41e-hanemi.vercel.app"
+        ],
+        "state": "READY"
+      },
+      "environment_count": 0,
+      "shared_environment_count": 0,
+      "git_link_present": false,
+      "bypass_secret_count": 0
+    },
+    "preview": {
+      "id": "dpl_HhdK7ikrNGkD5RfBgysN3GTggtLm",
+      "hostname": "ws-vpn-diag-origin-afef41e-mtxd9rmt9-hanemi.vercel.app",
+      "target": null,
+      "state": "READY",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "aliases": [],
+      "protection_verified_by": "project all; exact project membership; no unauthenticated HTTP probe",
+      "automation_secret_in_deployment_environment": false
+    },
+    "files_sha256": {
+      "api/origin.mjs": "3dd92ed2b4c6842e2f42ae26cc4417c518d792e5f8b4f76e55b699a969d8820a",
+      "package.json": "1dbca79e27224b7706651a436fec24c87b418f47c288fefa9ab36bf0d2a233ce",
+      "vercel.json": "b9e9bd6160a06cef3996af0acf35aef9f71138bfc4d7c4f7ceff9161d0363538",
+      "experiment.json": "b5965156abc60725bf03dad9589db7236bad6c79bf936db5b03121a7d881ae56"
+    },
+    "staging_allowlist_verified": true,
+    "fresh_id_count": 7,
+    "previous_id_reuse_checked": true,
+    "cli_dry_file_count": 4,
+    "expires_ms": 1792151011416,
+    "origin_requests": 0,
+    "bypass_secret_created": false,
+    "protection_writes": 0,
+    "production_alias_writes": 0
+  },
+  "matrix": {
+    "kind": "seven-protected-vercel-origin-matrix",
+    "adapter_source": "78d5f46",
+    "started_utc": "2026-10-16T11:25:21.459973+00:00",
+    "before": {
+      "utc": "2026-10-16T11:25:16.693620+00:00",
+      "user": "ihanemi",
+      "user_id": "LBDE7wqDFWomctJb4Yi6P9pY",
+      "scope": "hanemi",
+      "team_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "role": "OWNER",
+      "plan": "hobby",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "project_name": "ws-vpn-diag-origin-afef41e",
+      "configuration": {
+        "nodeVersion": "24.x",
+        "framework": null,
+        "buildCommand": null,
+        "installCommand": null,
+        "outputDirectory": null,
+        "rootDirectory": null,
+        "devCommand": null,
+        "ssoProtection": {
+          "deploymentType": "all"
+        },
+        "autoExposeSystemEnvs": true,
+        "directoryListing": false,
+        "resourceConfig": {
+          "fluid": true,
+          "functionDefaultRegions": [
+            "iad1"
+          ],
+          "buildMachineType": "basic",
+          "buildMachineSelection": "fixed"
+        }
+      },
+      "production_target": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "production_alias": "ws-vpn-diag-origin-afef41e.vercel.app",
+      "alias_deployment_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "old_deployment": {
+        "id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+        "aliases": [
+          "ws-vpn-diag-origin-afef41e.vercel.app",
+          "ws-vpn-diag-origin-afef41e-hanemi.vercel.app"
+        ],
+        "state": "READY"
+      },
+      "environment_count": 0,
+      "shared_environment_count": 0,
+      "git_link_present": false,
+      "bypass_secret_count": 0
+    },
+    "preview": {
+      "id": "dpl_HhdK7ikrNGkD5RfBgysN3GTggtLm",
+      "hostname": "ws-vpn-diag-origin-afef41e-mtxd9rmt9-hanemi.vercel.app",
+      "target": null,
+      "state": "READY",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "aliases": [],
+      "protection_verified_by": "project all; exact project membership; no unauthenticated HTTP probe",
+      "automation_secret_in_deployment_environment": false
+    },
+    "network": {
+      "hostname": "ws-vpn-diag-origin-afef41e-mtxd9rmt9-hanemi.vercel.app",
+      "port": 443,
+      "verified_utc": "2026-10-16T11:25:21.459854+00:00",
+      "addresses": [
+        {
+          "ip": "216.198.79.3",
+          "public": true,
+          "cloudflare": false,
+          "registered_network": {
+            "name": "VERCEL-05",
+            "startAddress": "216.198.79.0",
+            "endAddress": "216.198.79.255",
+            "country": null
+          },
+          "prefix": "216.198.79.0/24",
+          "owners": [
+            {
+              "asn": "16509",
+              "holder": "AMAZON-02 - Amazon.com, Inc."
+            }
+          ]
+        },
+        {
+          "ip": "64.29.17.3",
+          "public": true,
+          "cloudflare": false,
+          "registered_network": {
+            "name": "VERCEL-12",
+            "startAddress": "64.29.17.0",
+            "endAddress": "64.29.17.255",
+            "country": null
+          },
+          "prefix": "64.29.17.0/24",
+          "owners": [
+            {
+              "asn": "16509",
+              "holder": "AMAZON-02 - Amazon.com, Inc."
+            }
+          ]
+        }
+      ],
+      "pinned_ip": "216.198.79.3",
+      "workers_reachability_tested": false
+    },
+    "files_sha256": {
+      "api/origin.mjs": "3dd92ed2b4c6842e2f42ae26cc4417c518d792e5f8b4f76e55b699a969d8820a",
+      "package.json": "1dbca79e27224b7706651a436fec24c87b418f47c288fefa9ab36bf0d2a233ce",
+      "vercel.json": "b9e9bd6160a06cef3996af0acf35aef9f71138bfc4d7c4f7ceff9161d0363538",
+      "experiment.json": "b5965156abc60725bf03dad9589db7236bad6c79bf936db5b03121a7d881ae56"
+    },
+    "origin_requests": 7,
+    "protection_disabled": false,
+    "production_alias_modified": false,
+    "secret_note": "WSVPN protected origin matrix 20261016 baseline aa8e84e",
+    "secret_cleanup": {
+      "revoke_api_completed": true,
+      "revocation_verified": true,
+      "original_bypasses_preserved": true,
+      "remaining_bypass_count": 0
+    },
+    "dedicated_secret_created": true,
+    "provider_system_env_selection": true,
+    "secret_in_immutable_preview_environment": false,
+    "requests": [
+      {
+        "id": "14c51cfe8f30f866cac73905e30e0222",
+        "mode": "ok",
+        "passed": true,
+        "tls_verified": true,
+        "body_bytes": 180000,
+        "http_status": 200,
+        "reads": [
+          {
+            "elapsed_ms": 768.52,
+            "bytes": 543
+          },
+          {
+            "elapsed_ms": 858.43,
+            "bytes": 2372
+          },
+          {
+            "elapsed_ms": 858.484,
+            "bytes": 3558
+          },
+          {
+            "elapsed_ms": 864.501,
+            "bytes": 4744
+          },
+          {
+            "elapsed_ms": 869.599,
+            "bytes": 5930
+          },
+          {
+            "elapsed_ms": 872.937,
+            "bytes": 7116
+          },
+          {
+            "elapsed_ms": 876.71,
+            "bytes": 3127
+          },
+          {
+            "elapsed_ms": 881.909,
+            "bytes": 9488
+          },
+          {
+            "elapsed_ms": 924.987,
+            "bytes": 10674
+          },
+          {
+            "elapsed_ms": 933.322,
+            "bytes": 11860
+          },
+          {
+            "elapsed_ms": 936.92,
+            "bytes": 746
+          },
+          {
+            "elapsed_ms": 959.507,
+            "bytes": 14232
+          },
+          {
+            "elapsed_ms": 976.582,
+            "bytes": 15418
+          },
+          {
+            "elapsed_ms": 979.495,
+            "bytes": 225
+          },
+          {
+            "elapsed_ms": 990.654,
+            "bytes": 8949
+          },
+          {
+            "elapsed_ms": 1013.895,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1035.865,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1052.54,
+            "bytes": 11977
+          },
+          {
+            "elapsed_ms": 1067.172,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1083.566,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1084.548,
+            "bytes": 4048
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "216.198.79.3",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 255.119,
+        "end": "complete_body",
+        "phase_at_end": "response",
+        "elapsed_ms": 1084.731,
+        "body_wire_bytes": 180000,
+        "origin_source_marker": true,
+        "origin_rejection": null,
+        "echo_id_matches": true,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": true,
+        "transfer_encoding_present": false,
+        "first_body_ms": 858.43,
+        "http_bytes": 180543,
+        "matrix_started_ms": 0.002,
+        "matrix_finished_ms": 1085.638
+      },
+      {
+        "id": "d8282041866f980a18879c120df5c60a",
+        "mode": "ok",
+        "passed": true,
+        "tls_verified": true,
+        "body_bytes": 180000,
+        "http_status": 200,
+        "reads": [
+          {
+            "elapsed_ms": 723.083,
+            "bytes": 543
+          },
+          {
+            "elapsed_ms": 997.745,
+            "bytes": 2372
+          },
+          {
+            "elapsed_ms": 998.972,
+            "bytes": 3558
+          },
+          {
+            "elapsed_ms": 1005.314,
+            "bytes": 4744
+          },
+          {
+            "elapsed_ms": 1014.842,
+            "bytes": 5930
+          },
+          {
+            "elapsed_ms": 1022.291,
+            "bytes": 7116
+          },
+          {
+            "elapsed_ms": 1029.362,
+            "bytes": 8302
+          },
+          {
+            "elapsed_ms": 1029.406,
+            "bytes": 746
+          },
+          {
+            "elapsed_ms": 1071.698,
+            "bytes": 10674
+          },
+          {
+            "elapsed_ms": 1087.161,
+            "bytes": 11860
+          },
+          {
+            "elapsed_ms": 1087.206,
+            "bytes": 1402
+          },
+          {
+            "elapsed_ms": 1106.754,
+            "bytes": 14232
+          },
+          {
+            "elapsed_ms": 1106.881,
+            "bytes": 2002
+          },
+          {
+            "elapsed_ms": 1114.983,
+            "bytes": 10613
+          },
+          {
+            "elapsed_ms": 1128.553,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1152.684,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1157.019,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1164.359,
+            "bytes": 4542
+          },
+          {
+            "elapsed_ms": 1169.19,
+            "bytes": 8949
+          },
+          {
+            "elapsed_ms": 1189.275,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1189.32,
+            "bytes": 1514
+          },
+          {
+            "elapsed_ms": 1205.881,
+            "bytes": 15908
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "216.198.79.3",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 280.691,
+        "end": "complete_body",
+        "phase_at_end": "response",
+        "elapsed_ms": 1206.044,
+        "body_wire_bytes": 180000,
+        "origin_source_marker": true,
+        "origin_rejection": null,
+        "echo_id_matches": true,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": true,
+        "transfer_encoding_present": false,
+        "first_body_ms": 997.745,
+        "http_bytes": 180543,
+        "matrix_started_ms": 1085.644,
+        "matrix_finished_ms": 2292.942
+      },
+      {
+        "id": "090b1c57e2f234598a9db368d17bc3f1",
+        "mode": "ok",
+        "passed": true,
+        "tls_verified": true,
+        "body_bytes": 180000,
+        "http_status": 200,
+        "reads": [
+          {
+            "elapsed_ms": 590.9,
+            "bytes": 543
+          },
+          {
+            "elapsed_ms": 949.184,
+            "bytes": 2372
+          },
+          {
+            "elapsed_ms": 950.503,
+            "bytes": 3558
+          },
+          {
+            "elapsed_ms": 955.383,
+            "bytes": 4744
+          },
+          {
+            "elapsed_ms": 955.433,
+            "bytes": 5930
+          },
+          {
+            "elapsed_ms": 964.911,
+            "bytes": 7116
+          },
+          {
+            "elapsed_ms": 967.687,
+            "bytes": 3127
+          },
+          {
+            "elapsed_ms": 973.699,
+            "bytes": 9488
+          },
+          {
+            "elapsed_ms": 1012.904,
+            "bytes": 10674
+          },
+          {
+            "elapsed_ms": 1021.365,
+            "bytes": 11860
+          },
+          {
+            "elapsed_ms": 1021.416,
+            "bytes": 746
+          },
+          {
+            "elapsed_ms": 1043.755,
+            "bytes": 14232
+          },
+          {
+            "elapsed_ms": 1055.353,
+            "bytes": 15418
+          },
+          {
+            "elapsed_ms": 1055.436,
+            "bytes": 225
+          },
+          {
+            "elapsed_ms": 1068.034,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1089.969,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1090.029,
+            "bytes": 3028
+          },
+          {
+            "elapsed_ms": 1104.982,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1117.833,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1134.505,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1139.808,
+            "bytes": 5562
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "216.198.79.3",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 255.436,
+        "end": "complete_body",
+        "phase_at_end": "response",
+        "elapsed_ms": 1139.958,
+        "body_wire_bytes": 180000,
+        "origin_source_marker": true,
+        "origin_rejection": null,
+        "echo_id_matches": true,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": true,
+        "transfer_encoding_present": false,
+        "first_body_ms": 949.184,
+        "http_bytes": 180543,
+        "matrix_started_ms": 2292.948,
+        "matrix_finished_ms": 3433.554
+      },
+      {
+        "id": "167d55803008613ce37914f8f3ed0b16",
+        "mode": "stall-response",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 96,
+        "http_status": 500,
+        "reads": [
+          {
+            "elapsed_ms": 10805.457,
+            "bytes": 437
+          },
+          {
+            "elapsed_ms": 10805.497,
+            "bytes": 96
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "216.198.79.3",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 251.374,
+        "end": "SSLEOFError",
+        "phase_at_end": "response",
+        "elapsed_ms": 10805.709,
+        "body_wire_bytes": 96,
+        "origin_source_marker": false,
+        "origin_rejection": null,
+        "echo_id_matches": false,
+        "cache_state": "MISS",
+        "cache_no_store": false,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": false,
+        "transfer_encoding_present": false,
+        "first_body_ms": 10805.497,
+        "http_bytes": 533,
+        "matrix_started_ms": 3433.556,
+        "matrix_finished_ms": 14239.731
+      },
+      {
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "mode": "stall-body",
+        "passed": false,
+        "tls_verified": true,
+        "body_bytes": 0,
+        "http_status": 200,
+        "reads": [
+          {
+            "elapsed_ms": 10956.421,
+            "bytes": 543
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "216.198.79.3",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 403.052,
+        "end": "TimeoutError",
+        "phase_at_end": "response",
+        "elapsed_ms": 12003.361,
+        "body_wire_bytes": 0,
+        "origin_source_marker": true,
+        "origin_rejection": null,
+        "echo_id_matches": true,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": true,
+        "transfer_encoding_present": false,
+        "http_bytes": 543,
+        "matrix_started_ms": 14239.734,
+        "matrix_finished_ms": 26243.853
+      },
+      {
+        "id": "38f888ab6911570a70e77efc7f43fcbb",
+        "mode": "ok",
+        "passed": true,
+        "tls_verified": true,
+        "body_bytes": 180000,
+        "http_status": 200,
+        "reads": [
+          {
+            "elapsed_ms": 762.403,
+            "bytes": 543
+          },
+          {
+            "elapsed_ms": 1033.746,
+            "bytes": 2372
+          },
+          {
+            "elapsed_ms": 1045.697,
+            "bytes": 3558
+          },
+          {
+            "elapsed_ms": 1051.853,
+            "bytes": 4744
+          },
+          {
+            "elapsed_ms": 1060.186,
+            "bytes": 5930
+          },
+          {
+            "elapsed_ms": 1076.062,
+            "bytes": 7116
+          },
+          {
+            "elapsed_ms": 1085.355,
+            "bytes": 8302
+          },
+          {
+            "elapsed_ms": 1100.047,
+            "bytes": 746
+          },
+          {
+            "elapsed_ms": 1146.528,
+            "bytes": 10674
+          },
+          {
+            "elapsed_ms": 1147.541,
+            "bytes": 11860
+          },
+          {
+            "elapsed_ms": 1147.586,
+            "bytes": 1402
+          },
+          {
+            "elapsed_ms": 1148.461,
+            "bytes": 14232
+          },
+          {
+            "elapsed_ms": 1149.532,
+            "bytes": 12615
+          },
+          {
+            "elapsed_ms": 1176.381,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1217.776,
+            "bytes": 10463
+          },
+          {
+            "elapsed_ms": 1233.548,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1234.514,
+            "bytes": 1580
+          },
+          {
+            "elapsed_ms": 1234.778,
+            "bytes": 8883
+          },
+          {
+            "elapsed_ms": 1249.074,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1253.5,
+            "bytes": 10463
+          },
+          {
+            "elapsed_ms": 1273.272,
+            "bytes": 15908
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "216.198.79.3",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 387.095,
+        "end": "complete_body",
+        "phase_at_end": "response",
+        "elapsed_ms": 1273.452,
+        "body_wire_bytes": 180000,
+        "origin_source_marker": true,
+        "origin_rejection": null,
+        "echo_id_matches": true,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": true,
+        "transfer_encoding_present": false,
+        "first_body_ms": 1033.746,
+        "http_bytes": 180543,
+        "matrix_started_ms": 26244.23,
+        "matrix_finished_ms": 27518.61
+      },
+      {
+        "id": "810f1477c43d8ac457eb80c880f69393",
+        "mode": "ok",
+        "passed": true,
+        "tls_verified": true,
+        "body_bytes": 180000,
+        "http_status": 200,
+        "reads": [
+          {
+            "elapsed_ms": 753.361,
+            "bytes": 543
+          },
+          {
+            "elapsed_ms": 992.455,
+            "bytes": 2372
+          },
+          {
+            "elapsed_ms": 999.769,
+            "bytes": 3558
+          },
+          {
+            "elapsed_ms": 999.833,
+            "bytes": 4744
+          },
+          {
+            "elapsed_ms": 999.856,
+            "bytes": 5930
+          },
+          {
+            "elapsed_ms": 999.875,
+            "bytes": 7116
+          },
+          {
+            "elapsed_ms": 999.917,
+            "bytes": 8302
+          },
+          {
+            "elapsed_ms": 999.942,
+            "bytes": 746
+          },
+          {
+            "elapsed_ms": 1103.819,
+            "bytes": 10674
+          },
+          {
+            "elapsed_ms": 1104.698,
+            "bytes": 11860
+          },
+          {
+            "elapsed_ms": 1104.73,
+            "bytes": 1402
+          },
+          {
+            "elapsed_ms": 1105.868,
+            "bytes": 14232
+          },
+          {
+            "elapsed_ms": 1106.067,
+            "bytes": 2002
+          },
+          {
+            "elapsed_ms": 1122.366,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1161.767,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1181.186,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1182.341,
+            "bytes": 15126
+          },
+          {
+            "elapsed_ms": 1182.362,
+            "bytes": 29
+          },
+          {
+            "elapsed_ms": 1200.48,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1201.969,
+            "bytes": 16384
+          },
+          {
+            "elapsed_ms": 1218.32,
+            "bytes": 9987
+          }
+        ],
+        "tls": {
+          "version": "TLSv1.3",
+          "peer_ip": "216.198.79.3",
+          "certificate_sha256": "8f46c4a0a289bfde4060d06986f2af761ee62d668dde972e6bef4687ee4f6093",
+          "issuer": [
+            [
+              [
+                "countryName",
+                "US"
+              ]
+            ],
+            [
+              [
+                "organizationName",
+                "Google Trust Services"
+              ]
+            ],
+            [
+              [
+                "commonName",
+                "WR1"
+              ]
+            ]
+          ],
+          "san": [
+            [
+              "DNS",
+              "*.vercel.app"
+            ]
+          ],
+          "not_before": "Aug 29 19:48:09 2026 GMT",
+          "not_after": "Nov 27 19:48:08 2026 GMT"
+        },
+        "request_sent_ms": 386.787,
+        "end": "complete_body",
+        "phase_at_end": "response",
+        "elapsed_ms": 1218.502,
+        "body_wire_bytes": 180000,
+        "origin_source_marker": true,
+        "origin_rejection": null,
+        "echo_id_matches": true,
+        "cache_state": "MISS",
+        "cache_no_store": true,
+        "cache_age_zero_or_absent": true,
+        "identity_encoding": true,
+        "declared_length_matches": true,
+        "transfer_encoding_present": false,
+        "first_body_ms": 992.455,
+        "http_bytes": 180543,
+        "matrix_started_ms": 26244.482,
+        "matrix_finished_ms": 27464.078
+      }
+    ],
+    "all_client_controls_passed": false,
+    "after": {
+      "utc": "2026-10-16T11:26:06.401609+00:00",
+      "user": "ihanemi",
+      "user_id": "LBDE7wqDFWomctJb4Yi6P9pY",
+      "scope": "hanemi",
+      "team_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "role": "OWNER",
+      "plan": "hobby",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "project_name": "ws-vpn-diag-origin-afef41e",
+      "configuration": {
+        "nodeVersion": "24.x",
+        "framework": null,
+        "buildCommand": null,
+        "installCommand": null,
+        "outputDirectory": null,
+        "rootDirectory": null,
+        "devCommand": null,
+        "ssoProtection": {
+          "deploymentType": "all"
+        },
+        "autoExposeSystemEnvs": true,
+        "directoryListing": false,
+        "resourceConfig": {
+          "fluid": true,
+          "functionDefaultRegions": [
+            "iad1"
+          ],
+          "buildMachineType": "basic",
+          "buildMachineSelection": "fixed"
+        }
+      },
+      "production_target": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "production_alias": "ws-vpn-diag-origin-afef41e.vercel.app",
+      "alias_deployment_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "old_deployment": {
+        "id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+        "aliases": [
+          "ws-vpn-diag-origin-afef41e.vercel.app",
+          "ws-vpn-diag-origin-afef41e-hanemi.vercel.app"
+        ],
+        "state": "READY"
+      },
+      "environment_count": 0,
+      "shared_environment_count": 0,
+      "git_link_present": false,
+      "bypass_secret_count": 0
+    },
+    "final_state_matches_before": true,
+    "finished_utc": "2026-10-16T11:26:06.401668+00:00"
+  },
+  "runtime": {
+    "kind": "sanitized-protected-origin-runtime-evidence",
+    "deployment_id": "dpl_HhdK7ikrNGkD5RfBgysN3GTggtLm",
+    "queried_utc": "2026-10-16T11:27:02.502305+00:00",
+    "cli_exit_code": 0,
+    "summary": {
+      "records_returned": 40,
+      "has_more": false,
+      "excluded_intervals_present": false
+    },
+    "events": [
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "38f888ab6911570a70e77efc7f43fcbb",
+        "seq": 6,
+        "elapsed_ms": 0,
+        "event": "origin.close.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "38f888ab6911570a70e77efc7f43fcbb",
+        "seq": 5,
+        "elapsed_ms": 0,
+        "event": "origin.response.finish",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "38f888ab6911570a70e77efc7f43fcbb",
+        "seq": 4,
+        "elapsed_ms": 0,
+        "event": "origin.response.write_complete",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "38f888ab6911570a70e77efc7f43fcbb",
+        "seq": 3,
+        "elapsed_ms": 0,
+        "event": "origin.response.queued",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "38f888ab6911570a70e77efc7f43fcbb",
+        "seq": 2,
+        "elapsed_ms": 0,
+        "event": "origin.request.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "38f888ab6911570a70e77efc7f43fcbb",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "event": "origin.request.received",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "810f1477c43d8ac457eb80c880f69393",
+        "seq": 6,
+        "elapsed_ms": 1,
+        "event": "origin.close.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "810f1477c43d8ac457eb80c880f69393",
+        "seq": 5,
+        "elapsed_ms": 1,
+        "event": "origin.response.finish",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "810f1477c43d8ac457eb80c880f69393",
+        "seq": 4,
+        "elapsed_ms": 1,
+        "event": "origin.response.write_complete",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "810f1477c43d8ac457eb80c880f69393",
+        "seq": 3,
+        "elapsed_ms": 1,
+        "event": "origin.response.queued",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "810f1477c43d8ac457eb80c880f69393",
+        "seq": 2,
+        "elapsed_ms": 0,
+        "event": "origin.request.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "810f1477c43d8ac457eb80c880f69393",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "event": "origin.request.received",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "seq": 8,
+        "elapsed_ms": 10001,
+        "event": "origin.request.error",
+        "bytes": 0,
+        "mode": "stall-body",
+        "response_bytes": 1024
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "seq": 5,
+        "elapsed_ms": 10000,
+        "event": "origin.deadline",
+        "bytes": 0,
+        "mode": "stall-body",
+        "response_bytes": 1024
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "seq": 4,
+        "elapsed_ms": 1,
+        "event": "origin.response.write_complete",
+        "bytes": 1024,
+        "mode": "stall-body",
+        "response_bytes": 1024
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "seq": 3,
+        "elapsed_ms": 0,
+        "event": "origin.response.queued",
+        "bytes": 1024,
+        "mode": "stall-body",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "seq": 2,
+        "elapsed_ms": 0,
+        "event": "origin.request.complete",
+        "bytes": 0,
+        "mode": "stall-body",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "event": "origin.request.received",
+        "bytes": 0,
+        "mode": "stall-body",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "167d55803008613ce37914f8f3ed0b16",
+        "seq": 6,
+        "elapsed_ms": 10003,
+        "event": "origin.request.error",
+        "bytes": 0,
+        "mode": "stall-response",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "167d55803008613ce37914f8f3ed0b16",
+        "seq": 3,
+        "elapsed_ms": 10001,
+        "event": "origin.deadline",
+        "bytes": 0,
+        "mode": "stall-response",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "167d55803008613ce37914f8f3ed0b16",
+        "seq": 2,
+        "elapsed_ms": 0,
+        "event": "origin.request.complete",
+        "bytes": 0,
+        "mode": "stall-response",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "167d55803008613ce37914f8f3ed0b16",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "event": "origin.request.received",
+        "bytes": 0,
+        "mode": "stall-response",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "090b1c57e2f234598a9db368d17bc3f1",
+        "seq": 6,
+        "elapsed_ms": 2,
+        "event": "origin.close.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "090b1c57e2f234598a9db368d17bc3f1",
+        "seq": 5,
+        "elapsed_ms": 1,
+        "event": "origin.response.finish",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "090b1c57e2f234598a9db368d17bc3f1",
+        "seq": 4,
+        "elapsed_ms": 1,
+        "event": "origin.response.write_complete",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "090b1c57e2f234598a9db368d17bc3f1",
+        "seq": 3,
+        "elapsed_ms": 1,
+        "event": "origin.response.queued",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "090b1c57e2f234598a9db368d17bc3f1",
+        "seq": 2,
+        "elapsed_ms": 1,
+        "event": "origin.request.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "090b1c57e2f234598a9db368d17bc3f1",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "event": "origin.request.received",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "d8282041866f980a18879c120df5c60a",
+        "seq": 6,
+        "elapsed_ms": 2,
+        "event": "origin.close.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "d8282041866f980a18879c120df5c60a",
+        "seq": 5,
+        "elapsed_ms": 2,
+        "event": "origin.response.finish",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "d8282041866f980a18879c120df5c60a",
+        "seq": 4,
+        "elapsed_ms": 1,
+        "event": "origin.response.write_complete",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "d8282041866f980a18879c120df5c60a",
+        "seq": 3,
+        "elapsed_ms": 1,
+        "event": "origin.response.queued",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "d8282041866f980a18879c120df5c60a",
+        "seq": 2,
+        "elapsed_ms": 0,
+        "event": "origin.request.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "d8282041866f980a18879c120df5c60a",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "event": "origin.request.received",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "14c51cfe8f30f866cac73905e30e0222",
+        "seq": 6,
+        "elapsed_ms": 10,
+        "event": "origin.close.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "14c51cfe8f30f866cac73905e30e0222",
+        "seq": 5,
+        "elapsed_ms": 9,
+        "event": "origin.response.finish",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "14c51cfe8f30f866cac73905e30e0222",
+        "seq": 4,
+        "elapsed_ms": 8,
+        "event": "origin.response.write_complete",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 180000
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "14c51cfe8f30f866cac73905e30e0222",
+        "seq": 3,
+        "elapsed_ms": 5,
+        "event": "origin.response.queued",
+        "bytes": 180000,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "14c51cfe8f30f866cac73905e30e0222",
+        "seq": 2,
+        "elapsed_ms": 1,
+        "event": "origin.request.complete",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      },
+      {
+        "schema": "wsvpn-diag/1",
+        "side": "origin",
+        "id": "14c51cfe8f30f866cac73905e30e0222",
+        "seq": 1,
+        "elapsed_ms": 0,
+        "event": "origin.request.received",
+        "bytes": 0,
+        "mode": "ok",
+        "response_bytes": 0
+      }
+    ],
+    "rejections": [],
+    "receipt_events": 7,
+    "write_callback_bytes": 901024,
+    "finish_events": 5,
+    "complete_close_events": 5,
+    "sessions": [
+      {
+        "id": "090b1c57e2f234598a9db368d17bc3f1",
+        "mode": "ok",
+        "receipt_events": 1,
+        "write_callback_bytes": 180000,
+        "deadline_events": 0,
+        "deadline_close_events": 0,
+        "complete_close_events": 1,
+        "sequence": [
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "id": "14c51cfe8f30f866cac73905e30e0222",
+        "mode": "ok",
+        "receipt_events": 1,
+        "write_callback_bytes": 180000,
+        "deadline_events": 0,
+        "deadline_close_events": 0,
+        "complete_close_events": 1,
+        "sequence": [
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "id": "167d55803008613ce37914f8f3ed0b16",
+        "mode": "stall-response",
+        "receipt_events": 1,
+        "write_callback_bytes": 0,
+        "deadline_events": 1,
+        "deadline_close_events": 0,
+        "complete_close_events": 0,
+        "sequence": [
+          6,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "mode": "stall-body",
+        "receipt_events": 1,
+        "write_callback_bytes": 1024,
+        "deadline_events": 1,
+        "deadline_close_events": 0,
+        "complete_close_events": 0,
+        "sequence": [
+          8,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "id": "38f888ab6911570a70e77efc7f43fcbb",
+        "mode": "ok",
+        "receipt_events": 1,
+        "write_callback_bytes": 180000,
+        "deadline_events": 0,
+        "deadline_close_events": 0,
+        "complete_close_events": 1,
+        "sequence": [
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "id": "810f1477c43d8ac457eb80c880f69393",
+        "mode": "ok",
+        "receipt_events": 1,
+        "write_callback_bytes": 180000,
+        "deadline_events": 0,
+        "deadline_close_events": 0,
+        "complete_close_events": 1,
+        "sequence": [
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "id": "d8282041866f980a18879c120df5c60a",
+        "mode": "ok",
+        "receipt_events": 1,
+        "write_callback_bytes": 180000,
+        "deadline_events": 0,
+        "deadline_close_events": 0,
+        "complete_close_events": 1,
+        "sequence": [
+          6,
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      }
+    ],
+    "raw_logs_saved": false,
+    "worker_tail_used": false
+  },
+  "independent_final": {
+    "kind": "independent-protected-matrix-final-api-read",
+    "state": {
+      "utc": "2026-10-16T11:27:22.184556+00:00",
+      "user": "ihanemi",
+      "user_id": "LBDE7wqDFWomctJb4Yi6P9pY",
+      "scope": "hanemi",
+      "team_id": "team_rGnSqY0IkqM6gracJSAOzW50",
+      "role": "OWNER",
+      "plan": "hobby",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "project_name": "ws-vpn-diag-origin-afef41e",
+      "configuration": {
+        "nodeVersion": "24.x",
+        "framework": null,
+        "buildCommand": null,
+        "installCommand": null,
+        "outputDirectory": null,
+        "rootDirectory": null,
+        "devCommand": null,
+        "ssoProtection": {
+          "deploymentType": "all"
+        },
+        "autoExposeSystemEnvs": true,
+        "directoryListing": false,
+        "resourceConfig": {
+          "fluid": true,
+          "functionDefaultRegions": [
+            "iad1"
+          ],
+          "buildMachineType": "basic",
+          "buildMachineSelection": "fixed"
+        }
+      },
+      "production_target": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "production_alias": "ws-vpn-diag-origin-afef41e.vercel.app",
+      "alias_deployment_id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+      "old_deployment": {
+        "id": "dpl_8cuGnWLoCfQbvjUBCoMpANgGx2VM",
+        "url": "ws-vpn-diag-origin-afef41e-aws4eny6b-hanemi.vercel.app",
+        "aliases": [
+          "ws-vpn-diag-origin-afef41e.vercel.app",
+          "ws-vpn-diag-origin-afef41e-hanemi.vercel.app"
+        ],
+        "state": "READY"
+      },
+      "environment_count": 0,
+      "shared_environment_count": 0,
+      "git_link_present": false,
+      "bypass_secret_count": 0
+    },
+    "preview": {
+      "id": "dpl_HhdK7ikrNGkD5RfBgysN3GTggtLm",
+      "hostname": "ws-vpn-diag-origin-afef41e-mtxd9rmt9-hanemi.vercel.app",
+      "target": null,
+      "state": "READY",
+      "project_id": "prj_5zg0OaiYqUemEvmM62FR1YVGXqqM",
+      "aliases": [],
+      "protection_verified_by": "project all; exact project membership; no unauthenticated HTTP probe",
+      "automation_secret_in_deployment_environment": false
+    },
+    "matches_predeployment_state": true,
+    "bypass_secrets_remaining": 0,
+    "origin_requests_made_by_this_verifier": 0
+  },
+  "assessment": {
+    "passed": 5,
+    "failed": 2,
+    "all_tls_verified": true,
+    "maximum_observed_concurrency": 2,
+    "five_healthy_payloads_verified": true,
+    "client_synthetic_bytes_verified": 900000,
+    "origin_write_callback_bytes": 901024,
+    "stall_response": "Failed: HTTP 500 / 96-byte error response substituted after origin deadline; not the zero-HTTP control",
+    "stall_body": "Failed: runtime accepted 1024 bytes, client received only headers and zero body before its deadline; exact buffering/drop location unresolved",
+    "stall_lifecycle_sequence_gaps": [
+      {
+        "id": "167d55803008613ce37914f8f3ed0b16",
+        "observed_sequences": [
+          1,
+          2,
+          3,
+          6
+        ],
+        "deadline_close_observed": false
+      },
+      {
+        "id": "268ae4a34ac7b75cc868ba4335d67950",
+        "observed_sequences": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8
+        ],
+        "deadline_close_observed": false
+      }
+    ],
+    "origin_qualified_for_full_worker_diagnostic_experiment": false,
+    "configured_request_deadline_ms": 12000,
+    "maximum_measured_elapsed_ms": 12003.361,
+    "timeout_wall_time_overrun_ms": 3.361,
+    "deadline_note": "12-second I/O deadline; stall-body measured 12003.361 ms including timeout/closure/reporting overhead. No timeout extension was configured.",
+    "no_added_batches": true,
+    "no_retries": true,
+    "no_warmups": true,
+    "unauthenticated_probes": 0,
+    "worker_operations": 0,
+    "protection_writes": 0,
+    "production_alias_writes": 0
+  },
+  "local_checks": {
+    "linux": {
+      "unit_tests": 6,
+      "failed": 0,
+      "ruff": "unavailable in current runtime"
+    },
+    "windows": {
+      "unit_tests": 6,
+      "failed": 0,
+      "ruff": "passed after two explicit zip strictness fixes"
+    },
+    "git_diff_check": "passed"
+  },
+  "worker_rollback_preserved": "6a903b04-b90d-43f6-a9a6-4f6e129bbc4c",
+  "pr2": "Draft, unmerged; head 458e877"
+}
