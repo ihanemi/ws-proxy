@@ -46,13 +46,17 @@ form and exposes capped, predefined rejection codes without logging raw requests
 All 38 Node tests and 4 verifier tests passed on both Linux and Windows, including
 full 180,000-byte local HTTPS responses and intentional 10-second stalls through
 the rewrite. These are local results; the correction has **not been deployed**.
-One fresh-ID origin-only canary was subsequently authorized, but the
-[execution gate stopped it before deployment](docs/VERCEL_CANARY_GATE_2026-10-16.md):
-cleanup independent of the laptop could not be assured. Fresh API reads verified
-Hobby ownership, protection of all deployments and the unchanged original
-deployment/alias. Four allowlisted files were staged locally; no public canary
-request was sent. Hosted acceptance remains unverified.
-No new public requests, Worker session/deployment or live Worker tail occurred.
+The initial public canary was [stopped at its cleanup gate](docs/VERCEL_CANARY_GATE_2026-10-16.md).
+A separately authorized [protected-preview canary](docs/VERCEL_PROTECTED_CANARY_2026-10-16.md)
+then passed: exactly one Windows HTTPS request returned HTTP 200, the matching ID
+and all 180,000 verified bytes in 1.665 seconds, with six correlated origin events.
+Vercel Authentication stayed `all`; the dedicated automation bypass was revoked
+and fresh independent API reads verified zero remaining bypasses, the unchanged
+Hobby plan and original production deployment/aliases. Only four origin files
+were deployed to an immutable preview. No origin retry or unauthenticated probe ran.
+This single success does not qualify hosted stalls/concurrency or Worker raw-TCP
+reachability. The seven-request matrix remains unauthorized; no Worker operation
+or live Worker tail occurred.
 PR #2 stays Draft and unmerged.
 
 ## Choose a backend
@@ -144,6 +148,7 @@ there is no Android APK yet.
 
 ## Documentation
 
+- [Successful single protected Vercel canary and verified credential cleanup](docs/VERCEL_PROTECTED_CANARY_2026-10-16.md)
 - [Vercel rejection diagnosis, local correction and proposed single-request canary](docs/VERCEL_ORIGIN_REJECTION_DIAGNOSIS_2026-10-16.md)
 - [Latest bounded transport diagnosis and real TCP/HTTPS tests](docs/TRANSPORT_DIAGNOSIS_2026-10-15.md)
 - [Approved PR #2 deployment, failed live tests and verified version rollback](docs/PR2_LIVE_VALIDATION_2026-10-15.md)
