@@ -152,6 +152,28 @@ def run_case(host, address, identifier, mode, *, context=None, port=443, bypass_
     return report
 
 
+def run_matrix(host, address, identifiers, *, bypass_secret=None):
+    """Exactly five sequential controls, then two concurrent controls; no retry."""
+    if (len(identifiers) != 7 or len(set(identifiers)) != 7
+            or any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{32}", value) for value in identifiers)):
+        raise ValueError("Need seven unique diagnostic IDs")
+    started = time.monotonic()
+    options = {"bypass_secret": bypass_secret} if bypass_secret is not None else {}
+
+    def case(identifier, mode):
+        begin = (time.monotonic() - started) * 1000
+        result = run_case(host, address, identifier, mode, **options)
+        result["matrix_started_ms"] = round(begin, 3)
+        result["matrix_finished_ms"] = round((time.monotonic() - started) * 1000, 3)
+        return result
+
+    results = [case(identifiers[i], mode) for i, mode in enumerate(
+        ("ok", "ok", "ok", "stall-response", "stall-body"))]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results.extend(pool.map(lambda identifier: case(identifier, "ok"), identifiers[5:]))
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", required=True)
@@ -161,13 +183,13 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--canary", action="store_true", help="Exactly one fresh-ID ok request; no retries")
     parser.add_argument("--automation-bypass", action="store_true",
-                        help="Canary only; consume WSVPN_VERCEL_AUTOMATION_BYPASS from the process environment")
+                        help="Consume WSVPN_VERCEL_AUTOMATION_BYPASS from the process environment")
     args = parser.parse_args()
     secret = None
     if args.automation_bypass:
         secret = os.environ.pop("WSVPN_VERCEL_AUTOMATION_BYPASS", None)
-        if not args.canary or not secret or not re.fullmatch(r"[A-Za-z0-9_-]{16,256}", secret):
-            parser.error("Automation bypass needs canary mode and a valid process environment secret")
+        if not secret or not re.fullmatch(r"[A-Za-z0-9_-]{16,256}", secret):
+            parser.error("Automation bypass needs a valid process environment secret")
     if not re.fullmatch(r"[a-z0-9][a-z0-9.-]*\.vercel\.app", args.host):
         parser.error("Only the exact reviewed Vercel origin hostname is allowed")
     address = ipaddress.ip_address(args.ip)
@@ -189,10 +211,7 @@ def main():
         options = {"bypass_secret": secret} if args.automation_bypass else {}
         results = [run_case(args.host, args.ip, identifiers[0], "ok", **options)]
     else:
-        results = [run_case(args.host, args.ip, identifiers[i], mode) for i, mode in enumerate(
-            ("ok", "ok", "ok", "stall-response", "stall-body"))]
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            results.extend(pool.map(lambda identifier: run_case(args.host, args.ip, identifier, "ok"), identifiers[5:]))
+        results = run_matrix(args.host, args.ip, identifiers, bypass_secret=secret)
     report = {"kind": "independent-origin-only-no-worker", "host": args.host, "ip": args.ip, "port": 443,
               "requests": results, "all_client_controls_passed": all(case["passed"] for case in results),
               "origin_logs_correlation_required": True, "workers_reachability_tested": False}

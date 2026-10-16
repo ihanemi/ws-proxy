@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -25,6 +26,46 @@ def response(body, extra=b""):
 
 
 class IndependentOriginTests(unittest.TestCase):
+    def test_matrix_sends_exactly_seven_with_bypass_and_maximum_two_concurrent(self):
+        ids = [f"{i:032x}" for i in range(1, 8)]
+        active = peak = 0
+        calls = []
+        lock, barrier = threading.Lock(), threading.Barrier(2)
+        secret = "local_synthetic_bypass_" + "a" * 32
+
+        def case(host, ip, identifier, mode, **options):
+            nonlocal active, peak
+            self.assertEqual(options, {"bypass_secret": secret})
+            with lock:
+                calls.append((identifier, mode))
+                active += 1
+                peak = max(peak, active)
+            if identifier in ids[5:]:
+                barrier.wait(timeout=2)
+            with lock:
+                active -= 1
+            # Failure is retained; the runner must not retry or add a request.
+            return {"id": identifier, "mode": mode, "passed": mode == "ok"}
+
+        with patch.object(VERIFY, "run_case", side_effect=case) as run:
+            rows = VERIFY.run_matrix("test.vercel.app", "64.29.17.67", ids, bypass_secret=secret)
+        self.assertEqual(run.call_count, 7)
+        self.assertEqual(peak, 2)
+        self.assertEqual(calls[:5], list(zip(ids[:5], ["ok", "ok", "ok", "stall-response", "stall-body"])))
+        self.assertEqual(set(calls[5:]), {(identifier, "ok") for identifier in ids[5:]})
+        self.assertEqual([row["id"] for row in rows], ids)
+        self.assertEqual(sum(row["passed"] for row in rows), 5)
+        self.assertNotIn(secret, json.dumps(rows))
+        for previous, current in zip(rows[:5], rows[1:5]):
+            self.assertLessEqual(previous["matrix_finished_ms"], current["matrix_started_ms"])
+        self.assertLessEqual(max(rows[5]["matrix_started_ms"], rows[6]["matrix_started_ms"]),
+                             min(rows[5]["matrix_finished_ms"], rows[6]["matrix_finished_ms"]))
+        with patch.object(VERIFY, "run_case") as run:
+            for invalid in (ids[:6], [ids[0]] * 7, ["invalid"] + ids[1:]):
+                with self.assertRaises(ValueError):
+                    VERIFY.run_matrix("test.vercel.app", "64.29.17.67", invalid, bypass_secret=secret)
+            run.assert_not_called()
+
     def test_canary_cli_sends_exactly_one_request_without_retries(self):
         with tempfile.TemporaryDirectory(prefix="wsvpn-canary-cli-") as directory:
             root = Path(directory)
